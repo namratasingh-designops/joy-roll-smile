@@ -162,7 +162,7 @@ export function GameScreen() {
 
         {/* phone dice button in the thumb zone */}
         <div
-          className={`sticky bottom-2 z-20 flex lg:hidden ${settings.leftHanded ? "justify-start" : "justify-end"}`}
+          className={`fixed bottom-2 left-0 right-0 z-20 flex px-4 pb-[env(safe-area-inset-bottom)] lg:hidden ${settings.leftHanded ? "justify-start" : "justify-end"}`}
         >
           <div className="w-full max-w-sm">
             <RollDiceButton layout="wide" />
