@@ -34,6 +34,17 @@ export default function LudoApp() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
+  // any tap wakes the audio back up (screen locks while passing the device around)
+  useEffect(() => {
+    const wake = () => ensureAudioReady();
+    window.addEventListener("pointerdown", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.removeEventListener("pointerdown", wake);
+      window.removeEventListener("keydown", wake);
+    };
+  }, []);
+
   // gentle break reminder after 20 minutes of play
   useEffect(() => {
     if (!settings.breakReminder || screen !== "game") return;
