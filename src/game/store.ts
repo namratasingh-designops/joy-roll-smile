@@ -26,7 +26,7 @@ import {
   tokensHome,
 } from "./rules";
 import { LINES, line } from "./lines";
-import { setAudioSettings, sound, speak, stopVoice, unlockAudio, vibrate } from "@/audio/audio";
+import { ensureAudioReady, setAudioSettings, sound, speak, stopVoice, unlockAudio, vibrate } from "@/audio/audio";
 
 export type Screen =
   | "splash"
