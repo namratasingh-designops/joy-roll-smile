@@ -287,7 +287,25 @@ export function Celebration() {
 }
 
 export function StickerBook() {
-...
+  const stickers = useGame((s) => s.stickers);
+  const go = useGame((s) => s.go);
+  return (
+    <Shell>
+      <h1 className="font-display text-4xl text-ink">My sticker book</h1>
+      <p className="text-lg text-ink/70">One sticker for every game you finish.</p>
+      <div className="grid w-full grid-cols-4 gap-4 sm:grid-cols-6">
+        {Array.from({ length: Math.max(12, stickers.length) }).map((_, i) => (
+          <div
+            key={i}
+            className="flex aspect-square items-center justify-center rounded-3xl bg-panel text-4xl shadow-soft"
+          >
+            <span aria-hidden>{stickers[i] ?? ""}</span>
+            <span className="sr-only">{stickers[i] ? `Sticker ${i + 1}` : "Empty sticker space"}</span>
+          </div>
+        ))}
+      </div>
+      <ChunkyButton tone="green" icon={<span aria-hidden>🏠</span>} onClick={() => go("splash")}>
+        Back home
       </ChunkyButton>
     </Shell>
   );
