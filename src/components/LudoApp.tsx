@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useGame } from "@/game/store";
-import { pauseAllAudio, resumeAllAudio } from "@/audio/audio";
+import { ensureAudioReady, pauseAllAudio, resumeAllAudio } from "@/audio/audio";
 import { GameScreen, KeyboardControls } from "./GameScreen";
 import {
   BreakReminder,
@@ -32,6 +32,17 @@ export default function LudoApp() {
     const onVis = () => (document.hidden ? pauseAllAudio() : resumeAllAudio());
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // any tap wakes the audio back up (screen locks while passing the device around)
+  useEffect(() => {
+    const wake = () => ensureAudioReady();
+    window.addEventListener("pointerdown", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.removeEventListener("pointerdown", wake);
+      window.removeEventListener("keydown", wake);
+    };
   }, []);
 
   // gentle break reminder after 20 minutes of play
