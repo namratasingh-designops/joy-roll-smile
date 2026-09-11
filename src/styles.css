@@ -18,7 +18,28 @@
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
+@theme {
+  --font-display: "Fredoka", "Baloo 2", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, sans-serif;
+  --color-panel: oklch(0.973 0.026 88);
+  --color-ink: oklch(0.301 0.089 271);
+  --color-wood: oklch(0.716 0.093 62);
+  --color-wood-dark: oklch(0.564 0.096 55);
+  --color-sky: oklch(0.842 0.093 234);
+  --color-play-blue: oklch(0.594 0.199 259);
+  --color-play-blue-dark: oklch(0.44 0.18 259);
+  --color-play-red: oklch(0.615 0.212 22);
+  --color-play-red-dark: oklch(0.47 0.19 22);
+  --color-play-green: oklch(0.652 0.166 152);
+  --color-play-green-dark: oklch(0.5 0.15 152);
+  --color-play-yellow: oklch(0.851 0.157 87);
+  --color-play-yellow-dark: oklch(0.66 0.14 80);
+  --shadow-toy: 0 10px 0 0 rgb(0 0 0 / 0.13), 0 16px 30px -12px rgb(31 43 92 / 0.35);
+  --shadow-soft: 0 8px 24px -10px rgb(31 43 92 / 0.35);
+}
+
 @theme inline {
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
