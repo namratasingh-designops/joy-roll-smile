@@ -512,6 +512,8 @@ export const useGame = create<Store>((set, get) => {
     },
 
     confirmHandoff() {
+      void unlockAudio();
+      ensureAudioReady();
       sound.tap();
       set({ overlay: null, hint: "Tap the dice to roll!" });
       say(line(LINES.yourTurn), "pointing");
