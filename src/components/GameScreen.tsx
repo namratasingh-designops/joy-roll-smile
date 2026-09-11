@@ -56,9 +56,11 @@ export function GameScreen() {
       onClick={() => skipBuddies()}
     >
       {webgl ? (
-        <Suspense fallback={<Loader />}>
-          <Board3D />
-        </Suspense>
+        <BoardBoundary fallback={<BoardFallback />}>
+          <Suspense fallback={<Loader />}>
+            <Board3D />
+          </Suspense>
+        </BoardBoundary>
       ) : (
         <BoardFallback />
       )}
