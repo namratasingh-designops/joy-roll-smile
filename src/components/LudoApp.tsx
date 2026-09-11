@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useGame } from "@/game/store";
-import { pauseAllAudio, resumeAllAudio } from "@/audio/audio";
+import { ensureAudioReady, pauseAllAudio, resumeAllAudio } from "@/audio/audio";
 import { GameScreen, KeyboardControls } from "./GameScreen";
 import {
   BreakReminder,
