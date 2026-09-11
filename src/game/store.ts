@@ -35,7 +35,8 @@ export type Screen =
   | "game"
   | "howto"
   | "celebration"
-  | "stickers";
+  | "stickers"
+  | "soundtest";
 
 export type Overlay = "exit" | "gate" | "settings" | "handoff" | "break" | null;
 

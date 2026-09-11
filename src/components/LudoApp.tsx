@@ -12,6 +12,7 @@ import {
   HowToPlay,
   ModeSelect,
   ParentGate,
+  SoundTest,
   Splash,
   StickerBook,
 } from "./screens";
@@ -64,6 +65,7 @@ export default function LudoApp() {
       {screen === "howto" && <HowToPlay />}
       {screen === "celebration" && <Celebration />}
       {screen === "stickers" && <StickerBook />}
+      {screen === "soundtest" && <SoundTest />}
 
       {overlay === "exit" && <ExitConfirm />}
       {overlay === "gate" && <ParentGate />}

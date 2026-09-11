@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, type Color } from "@/game/board";
 import { useGame } from "@/game/store";
-import { unlockAudio, sound } from "@/audio/audio";
+import { unlockAudio, sound, speak, vibrate } from "@/audio/audio";
 import { Mascot, SpeechBubble } from "./Mascot";
 import { ChunkyButton, Logo, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
@@ -63,6 +63,9 @@ export function Splash() {
         </ChunkyButton>
         <ChunkyButton icon={<span aria-hidden>📖</span>} onClick={() => go("stickers")}>
           Stickers
+        </ChunkyButton>
+        <ChunkyButton icon={<span aria-hidden>🔊</span>} onClick={() => go("soundtest")}>
+          Sound test
         </ChunkyButton>
       </div>
       <ValuesStrip />
@@ -301,6 +304,50 @@ export function StickerBook() {
           </div>
         ))}
       </div>
+      <ChunkyButton tone="green" icon={<span aria-hidden>🏠</span>} onClick={() => go("splash")}>
+        Back home
+      </ChunkyButton>
+    </Shell>
+  );
+}
+
+const SOUND_TESTS: { label: string; icon: string; play: () => void }[] = [
+  { label: "Dice roll", icon: "🎲", play: () => { sound.rattle(); setTimeout(() => sound.thud(), 450); vibrate(25); } },
+  { label: "Move", icon: "👣", play: () => { for (let i = 0; i < 4; i++) setTimeout(() => sound.hop(i), i * 180); } },
+  { label: "Bump", icon: "💥", play: () => sound.boing() },
+  { label: "Safe star", icon: "⭐", play: () => sound.star() },
+  { label: "Home!", icon: "🏠", play: () => { sound.fanfare(); vibrate(40); } },
+  { label: "Win!", icon: "🏆", play: () => { sound.win(); vibrate([40, 60, 80]); } },
+  { label: "Voice", icon: "🗣️", play: () => speak("Hello friend! Let's play Ludo!") },
+];
+
+export function SoundTest() {
+  const go = useGame((s) => s.go);
+  const [last, setLast] = useState<string | null>(null);
+  return (
+    <Shell>
+      <h1 className="font-display text-4xl text-ink">Sound test</h1>
+      <p className="text-lg text-ink/70">Tap a button — you should hear it right away.</p>
+      <div className="grid w-full max-w-lg grid-cols-2 gap-4">
+        {SOUND_TESTS.map((t) => (
+          <ChunkyButton
+            key={t.label}
+            tone={last === t.label ? "green" : "blue"}
+            className="h-24 flex-col text-2xl"
+            onClick={async () => {
+              await unlockAudio();
+              setLast(t.label);
+              t.play();
+            }}
+          >
+            <span className="text-4xl" aria-hidden>{t.icon}</span>
+            {t.label}
+          </ChunkyButton>
+        ))}
+      </div>
+      <p className="min-h-7 text-lg text-ink/70" aria-live="polite">
+        {last ? `Played: ${last}` : "Nothing played yet"}
+      </p>
       <ChunkyButton tone="green" icon={<span aria-hidden>🏠</span>} onClick={() => go("splash")}>
         Back home
       </ChunkyButton>
