@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, type Color } from "@/game/board";
 import { useGame } from "@/game/store";
-import { unlockAudio, sound } from "@/audio/audio";
+import { unlockAudio, sound, speak, vibrate } from "@/audio/audio";
 import { Mascot, SpeechBubble } from "./Mascot";
 import { ChunkyButton, Logo, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
