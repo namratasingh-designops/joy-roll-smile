@@ -144,10 +144,27 @@ export function pauseAllAudio() {
   if (Tone.getTransport().state === "started") Tone.getTransport().pause();
 }
 
-export function resumeAllAudio() {
-  if (started && settings.music && Tone.getTransport().state !== "started") {
-    Tone.getTransport().start();
+/**
+ * Browsers suspend the audio context when the screen locks or the tab is
+ * hidden (very common when a device is passed around in Family Play). Waking it
+ * back up is what keeps dice rattles and cheers audible.
+ */
+export function ensureAudioReady() {
+  if (!started) {
+    void unlockAudio();
+    return;
   }
+  try {
+    const ctx = Tone.getContext();
+    if (ctx.state !== "running") void ctx.resume();
+  } catch {
+    /* ignore */
+  }
+  if (settings.music && Tone.getTransport().state !== "started") Tone.getTransport().start();
+}
+
+export function resumeAllAudio() {
+  ensureAudioReady();
 }
 
 /* ---------------------------------- voice --------------------------------- */
