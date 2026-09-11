@@ -83,7 +83,7 @@ export function GameScreen() {
       <Playroom />
       <LiveRegion />
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[110rem] flex-col gap-3 px-3 py-3 sm:px-5">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[110rem] flex-col gap-3 px-3 py-3 pb-44 sm:px-5 lg:pb-3">
         {/* top bar */}
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="flex min-w-0 items-start gap-4">
