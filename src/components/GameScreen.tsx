@@ -5,8 +5,9 @@ import { Mascot, SpeechBubble } from "./Mascot";
 import { ChunkyButton, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
 import { BoardFallback } from "./BoardFallback";
+import { BoardBoundary, retryImport } from "./BoardBoundary";
 
-const Board3D = lazy(() => import("@/three/Board3D"));
+const Board3D = lazy(() => retryImport(() => import("@/three/Board3D")));
 
 function webglAvailable() {
   if (typeof document === "undefined") return true;
@@ -56,9 +57,11 @@ export function GameScreen() {
       onClick={() => skipBuddies()}
     >
       {webgl ? (
-        <Suspense fallback={<Loader />}>
-          <Board3D />
-        </Suspense>
+        <BoardBoundary fallback={<BoardFallback />}>
+          <Suspense fallback={<Loader />}>
+            <Board3D />
+          </Suspense>
+        </BoardBoundary>
       ) : (
         <BoardFallback />
       )}
@@ -80,7 +83,7 @@ export function GameScreen() {
       <Playroom />
       <LiveRegion />
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[110rem] flex-col gap-3 px-3 py-3 sm:px-5">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[110rem] flex-col gap-3 px-3 py-3 pb-44 sm:px-5 lg:pb-3">
         {/* top bar */}
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="flex min-w-0 items-start gap-4">
@@ -159,7 +162,7 @@ export function GameScreen() {
 
         {/* phone dice button in the thumb zone */}
         <div
-          className={`sticky bottom-2 z-20 flex lg:hidden ${settings.leftHanded ? "justify-start" : "justify-end"}`}
+          className={`fixed bottom-2 left-0 right-0 z-20 flex px-4 pb-[env(safe-area-inset-bottom)] lg:hidden ${settings.leftHanded ? "justify-start" : "justify-end"}`}
         >
           <div className="w-full max-w-sm">
             <RollDiceButton layout="wide" />
