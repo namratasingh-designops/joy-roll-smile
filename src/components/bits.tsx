@@ -212,6 +212,7 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
   const phase = useGame((s) => s.phase);
   const dice = useGame((s) => s.dice);
   const roll = useGame((s) => s.roll);
+  const watchBuddy = useGame((s) => s.watchBuddy);
   const game = useGame((s) => s.game);
   const showPointer = useGame((s) => s.showHandPointer);
   const reduced = useGame((s) => s.settings.reducedMotion);
@@ -222,8 +223,8 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
     <div className={`relative flex flex-col items-center ${layout === "wide" ? "w-full" : ""}`}>
       <motion.button
         type="button"
-        onClick={roll}
-        disabled={!canRoll}
+        onClick={() => (isHumanTurn ? roll() : watchBuddy())}
+        disabled={isHumanTurn && !canRoll}
         aria-label="Roll the dice"
         aria-keyshortcuts="Space Enter"
         {...(reduced || !canRoll
