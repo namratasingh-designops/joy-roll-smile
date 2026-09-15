@@ -511,7 +511,8 @@ export const useGame = create<Store>((set, get) => {
     // the headline must match the medals: only first place gets a win line
     const winner = finished.players.find((p) => p.color === ranking[0]);
     if (winner && winner.name === "You") say(line(LINES.win), "cheering");
-    else if (winner) say(line(LINES.buddyWin(winner.name)), "cheering");
+    else if (winner)
+      say(`${line(LINES.buddyWin(winner.name))} ${line(LINES.goodTry)}`, "clapping");
     else say(line(LINES.goodTry), "clapping");
   }
 
