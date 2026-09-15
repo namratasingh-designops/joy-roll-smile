@@ -359,6 +359,11 @@ export const useGame = create<Store>((set, get) => {
             sound.fanfare();
             vibrate(40);
             say(line(LINES.homeToken), "cheering");
+            // first token safely home earns a sticker, even if the game is left early
+            if (player.isHuman && !get().earnedHomeSticker) {
+              set({ earnedHomeSticker: true });
+              awardSticker();
+            }
           } else if (ev.type === "gameOver") {
             extra = false;
           }
