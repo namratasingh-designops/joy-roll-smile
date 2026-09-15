@@ -17,8 +17,9 @@ const defs = [
   { color: "red" as const, name: "Red", isHuman: false },
 ];
 
+/** Two tokens each keeps these assertions readable; the app now picks 2–4. */
 function game(over: Partial<typeof DEFAULT_RULES> = {}): GameState {
-  return createGame(defs, { ...DEFAULT_RULES, ...over });
+  return createGame(defs, { ...DEFAULT_RULES, tokensPerPlayer: 2, ...over });
 }
 
 describe("board geometry", () => {
@@ -45,9 +46,8 @@ describe("leaving base", () => {
     expect(legalMoves(s, 6)).toHaveLength(2);
   });
 
-  it("grants a lucky roll after three stuck turns", () => {
+  it("grants a lucky roll after two stuck turns", () => {
     let s = game();
-    s = registerStuckTurn(s);
     s = registerStuckTurn(s);
     s = registerStuckTurn(s);
     s = nextTurn(nextTurn(s)); // back to blue

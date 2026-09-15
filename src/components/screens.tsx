@@ -1,7 +1,8 @@
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, seatColors, type Color } from "@/game/board";
+import { estimateMinutes, tokensForCount } from "@/game/rules";
 import { AVATARS, STICKERS, STICKER_NAMES, useGame } from "@/game/store";
 import { unlockAudio, sound, speak, vibrate } from "@/audio/audio";
 import { Mascot, SpeechBubble } from "./Mascot";
@@ -64,6 +65,7 @@ export function Splash() {
           Keep playing
         </ChunkyButton>
       )}
+      <DifficultyPicker />
       <div className="flex flex-wrap justify-center gap-3">
         <ChunkyButton icon={<span aria-hidden>❓</span>} onClick={() => go("howto")}>
           How to play
@@ -77,6 +79,44 @@ export function Splash() {
       </div>
       <ValuesStrip />
     </Shell>
+  );
+}
+
+/** Right on the first screen: easy helpers, or full rules for older children. */
+function DifficultyPicker() {
+  const difficulty = useGame((s) => s.settings.difficulty);
+  const setDifficulty = useGame((s) => s.setDifficulty);
+  const say = useGame((s) => s.say);
+  const options = [
+    { key: "starting" as const, face: "🐣", label: "Just starting", hint: "Lots of help" },
+    { key: "know" as const, face: "🎓", label: "I know Ludo", hint: "Real rules, real choices" },
+  ];
+  return (
+    <div className="flex flex-wrap justify-center gap-3" role="group" aria-label="How well do you know Ludo?">
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          aria-pressed={difficulty === o.key}
+          onClick={() => {
+            sound.tap();
+            setDifficulty(o.key);
+            say(o.key === "know" ? "Great, real Ludo rules!" : "We'll help you along!", "clapping");
+          }}
+          className={`chunky flex items-center gap-3 px-5 py-3 text-ink ${
+            difficulty === o.key ? "bg-play-yellow" : "bg-panel"
+          }`}
+        >
+          <span className="text-3xl" aria-hidden>
+            {o.face}
+          </span>
+          <span className="text-left">
+            <span className="block font-display text-xl">{o.label}</span>
+            <span className="block text-sm text-ink/70">{o.hint}</span>
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -139,34 +179,47 @@ export function PlayerCountSelect() {
     say("How many players?", "pointing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const auto = useGame((s) => s.settings.tokensAuto);
+  const manualTokens = useGame((s) => s.settings.rules.tokensPerPlayer);
   return (
     <Shell>
       <h1 className="font-display text-4xl text-ink">How many players?</h1>
       <div className="grid w-full gap-5 sm:grid-cols-3">
-        {([2, 3, 4] as const).map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-pressed={count === n}
-            onClick={() => {
-              sound.tap();
-              setCount(n);
-              say(`${n} players!`, "clapping");
-              setTimeout(() => go("color"), 700);
-            }}
-            className={`chunky flex flex-col items-center gap-2 p-5 text-ink ${
-              count === n ? "bg-play-yellow" : "bg-panel"
-            }`}
-          >
-            <span className="flex gap-1 text-4xl" aria-hidden>
-              {COUNT_FACES.slice(0, n).map((f, i) => (
-                <span key={i}>{f}</span>
-              ))}
-            </span>
-            <span className="font-display text-5xl">{n}</span>
-            <span className="sr-only">{n} players</span>
-          </button>
-        ))}
+        {([2, 3, 4] as const).map((n) => {
+          const tokens = auto ? tokensForCount(n) : manualTokens;
+          const minutes = estimateMinutes(n, tokens);
+          return (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={count === n}
+              onClick={() => {
+                sound.tap();
+                setCount(n);
+                say(`${n} players!`, "clapping");
+                setTimeout(() => go("color"), 700);
+              }}
+              className={`chunky flex flex-col items-center gap-2 p-5 text-ink ${
+                count === n ? "bg-play-yellow" : "bg-panel"
+              }`}
+            >
+              <span className="flex gap-1 text-4xl" aria-hidden>
+                {COUNT_FACES.slice(0, n).map((f, i) => (
+                  <span key={i}>{f}</span>
+                ))}
+              </span>
+              <span className="font-display text-5xl">{n}</span>
+              <span className="text-sm text-ink/70">
+                {n} players · {tokens} pieces each · about {minutes} minutes
+              </span>
+              {minutes >= 35 && (
+                <span className="text-sm font-bold text-play-red">
+                  That's a long game — around {minutes} minutes
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
       <ChunkyButton icon={<span aria-hidden>⬅</span>} onClick={() => go("mode")}>
         Back
@@ -566,10 +619,64 @@ export function SoundTest() {
 
 /* ------------------------------- overlays -------------------------------- */
 
-function Modal({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * Dialog with a focus trap: focus starts on the first button, Tab stays inside,
+ * Escape closes this dialog (never stacks another) and focus goes back after.
+ */
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose?: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const setOverlay = useGame((s) => s.setOverlay);
+  const close = onClose ?? (() => setOverlay(null));
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        ref.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      previous?.focus?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
       <motion.div
+        ref={ref}
         initial={{ scale: 0.85, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         role="dialog"
@@ -658,12 +765,27 @@ export function GrownUpSettings() {
   const set = useGame((st) => st.setSettings);
   const setRules = useGame((st) => st.setRules);
   const setOverlay = useGame((st) => st.setOverlay);
+  const setDifficulty = useGame((st) => st.setDifficulty);
+  const game = useGame((st) => st.game);
+  const count = useGame((st) => st.playerCount);
+  const tokens = s.tokensAuto ? tokensForCount(count) : s.rules.tokensPerPlayer;
+  const longGame = count === 4 && tokens === 4;
   return (
     <Modal title="Grown-up settings">
-      <Row label="Tokens each">
-        <Choice on={s.rules.tokensPerPlayer === 2} onClick={() => setRules({ tokensPerPlayer: 2 })}>2</Choice>
-        <Choice on={s.rules.tokensPerPlayer === 4} onClick={() => setRules({ tokensPerPlayer: 4 })}>4</Choice>
+      <Row label="Level">
+        <Choice on={s.difficulty === "starting"} onClick={() => setDifficulty("starting")}>Just starting</Choice>
+        <Choice on={s.difficulty === "know"} onClick={() => setDifficulty("know")}>I know Ludo</Choice>
       </Row>
+      <Row label="Pieces each">
+        <Choice on={s.tokensAuto} onClick={() => set({ tokensAuto: true })}>Automatic</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 2} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 2 }); }}>2</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 3} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 3 }); }}>3</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 4} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 4 }); }}>4</Choice>
+      </Row>
+      <p className="text-base text-ink/70">
+        {count} players · {tokens} pieces each · about {estimateMinutes(count, tokens)} minutes
+        {longGame && " — that's a long sitting for a young child."}
+      </p>
       <Row label="Rules">
         <Choice on={s.rules.easyExit && s.rules.easyFinish} onClick={() => setRules({ easyExit: true, easyFinish: true })}>Easy</Choice>
         <Choice on={!s.rules.easyExit && !s.rules.easyFinish} onClick={() => setRules({ easyExit: false, easyFinish: false })}>Classic</Choice>
@@ -672,6 +794,15 @@ export function GrownUpSettings() {
         <Choice on={s.rules.friendly} onClick={() => setRules({ friendly: true })}>On</Choice>
         <Choice on={!s.rules.friendly} onClick={() => setRules({ friendly: false })}>Off</Choice>
       </Row>
+      <Row label="Help with the only move">
+        <Choice on={s.autoMoveSingle} onClick={() => set({ autoMoveSingle: true })}>On</Choice>
+        <Choice on={!s.autoMoveSingle} onClick={() => set({ autoMoveSingle: false })}>Off</Choice>
+      </Row>
+      {game && (
+        <p className="text-base text-ink/70">
+          Rules changes apply right away; the number of pieces applies to the next game.
+        </p>
+      )}
       <Row label="Buddy speed">
         <Choice on={s.buddySpeed >= 2600} onClick={() => set({ buddySpeed: 2600 })}>Slow</Choice>
         <Choice on={s.buddySpeed === 2000} onClick={() => set({ buddySpeed: 2000 })}>Normal</Choice>

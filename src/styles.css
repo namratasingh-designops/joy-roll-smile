@@ -229,12 +229,12 @@
   }
 }
 
-/* Larger UI: bumps text and button padding ~25%. */
-.bigger-ui {
+/* Larger UI: every size in the app is in rem, so scale the root font size. */
+html.bigger-ui {
   font-size: 125%;
+}
 
-  button,
-  [role="button"] {
-    padding: 0.75em 1.1em;
-  }
+html.bigger-ui button,
+html.bigger-ui [role="button"] {
+  padding: 0.7em 1em;
 }

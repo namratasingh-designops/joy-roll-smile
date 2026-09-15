@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "@/game/store";
 import { Mascot, SpeechBubble } from "./Mascot";
-import { ChunkyButton, HopCounter, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, TurnOrderStrip, ValuesStrip } from "./bits";
+import { ChunkyButton, HopCounter, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, SkipBuddyButton, TokenButtons, TurnOrderStrip, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
 import { BoardFallback } from "./BoardFallback";
 import { BoardBoundary, retryImport } from "./BoardBoundary";
@@ -45,17 +45,14 @@ export function GameScreen() {
   const setOverlay = useGame((s) => s.setOverlay);
   const go = useGame((s) => s.go);
   const setSettings = useGame((s) => s.setSettings);
-  const skipBuddies = useGame((s) => s.skipBuddies);
+  
   const [webgl] = useState(() => webglAvailable());
 
   if (!game) return null;
   const active = game.players[game.turn]!;
 
   const board = (
-    <div
-      className="relative aspect-square w-full max-w-[min(92vw,72dvh)]"
-      onClick={() => skipBuddies()}
-    >
+    <div className="relative aspect-square w-full max-w-[min(92vw,72dvh)]">
       {webgl ? (
         <BoardBoundary fallback={<BoardFallback />}>
           <Suspense fallback={<Loader />}>
@@ -141,6 +138,7 @@ export function GameScreen() {
             <span className="hidden lg:block">
               <TurnOrderStrip />
             </span>
+            <SkipBuddyButton />
           </div>
 
           <div className={`order-3 hidden lg:flex lg:justify-center lg:order-none ${settings.leftHanded ? "lg:col-start-1 lg:row-start-1" : ""}`}>
@@ -182,23 +180,28 @@ export function GameScreen() {
   );
 }
 
-/** Keyboard play: space/enter rolls, arrows cycle tokens, escape pauses. */
+/**
+ * Keyboard play: space/enter rolls, arrows cycle tokens, escape pauses.
+ * The selected index lives in the store so the board and the token buttons can
+ * both show which token is picked out.
+ */
 export function KeyboardControls() {
   const roll = useGame((s) => s.roll);
   const moves = useGame((s) => s.moves);
   const phase = useGame((s) => s.phase);
   const choose = useGame((s) => s.chooseToken);
   const setOverlay = useGame((s) => s.setOverlay);
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => setIndex(0), [moves]);
+  const overlay = useGame((s) => s.overlay);
+  const index = useGame((s) => s.selectedIndex);
+  const setIndex = useGame((s) => s.setSelectedIndex);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const typing = target && ["INPUT", "TEXTAREA", "BUTTON"].includes(target.tagName);
       if (e.key === "Escape") {
-        setOverlay("exit");
+        // an open dialog handles its own Escape; never stack a second one
+        if (!overlay) setOverlay("exit");
         return;
       }
       if ((e.key === " " || e.key === "Enter") && !typing) {
@@ -207,15 +210,15 @@ export function KeyboardControls() {
         else if (phase === "choosing" && moves[index]) choose(moves[index].tokenId);
       }
       if (phase === "choosing" && (e.key === "ArrowRight" || e.key === "ArrowDown")) {
-        setIndex((i) => (i + 1) % moves.length);
+        setIndex((index + 1) % moves.length);
       }
       if (phase === "choosing" && (e.key === "ArrowLeft" || e.key === "ArrowUp")) {
-        setIndex((i) => (i - 1 + moves.length) % moves.length);
+        setIndex((index - 1 + moves.length) % moves.length);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phase, moves, index, roll, choose, setOverlay]);
+  }, [phase, moves, index, roll, choose, setOverlay, setIndex, overlay]);
 
   return null;
 }
