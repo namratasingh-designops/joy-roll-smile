@@ -52,9 +52,19 @@ function Tile({
   );
 }
 
-function BasePad({ color }: { color: Color }) {
+function BasePad({ color, inPlay }: { color: Color; inPlay: boolean }) {
   const origin = BASE_ORIGIN[color];
   const [x, z] = pos([origin[0] + 2.5, origin[1] + 2.5]);
+  if (!inPlay) {
+    // an empty corner: dim, flat and with no token slots, so it reads as "not in play"
+    return (
+      <group position={[x, 0.14, z]}>
+        <RoundedBox args={[6, 0.1, 6]} radius={0.35} smoothness={2}>
+          <meshStandardMaterial color="#E7DCC7" roughness={0.85} />
+        </RoundedBox>
+      </group>
+    );
+  }
   return (
     <group position={[x, 0.18, z]}>
       <RoundedBox args={[6, 0.22, 6]} radius={0.35} smoothness={3}>
@@ -186,6 +196,8 @@ function Scene() {
   const reduced = useGame((s) => s.settings.reducedMotion);
   const chooseToken = useGame((s) => s.chooseToken);
 
+  const inPlay = useMemo(() => game?.players.map((p) => p.color) ?? COLORS, [game?.players]);
+
   const tiles = useMemo(() => {
     const list: { cell: Cell; color: string; star?: boolean }[] = [];
     LOOP.forEach((cell, i) => {
@@ -196,11 +208,12 @@ function Scene() {
         star: STAR_LOOP_INDEXES.includes(i),
       });
     });
-    COLORS.forEach((c) => {
+    // home lanes only exist for colours that are actually playing
+    inPlay.forEach((c) => {
       HOME_LANE[c].forEach((cell) => list.push({ cell, color: COLOR_HEX[c] }));
     });
     return list;
-  }, []);
+  }, [inPlay]);
 
   const movableIds = phase === "choosing" ? moves.map((m) => m.tokenId) : [];
 
@@ -226,7 +239,7 @@ function Scene() {
       </group>
 
       {COLORS.map((c) => (
-        <BasePad key={c} color={c} />
+        <BasePad key={c} color={c} inPlay={inPlay.includes(c)} />
       ))}
       {tiles.map((t, i) => (
         <Tile key={i} cell={t.cell} color={t.color} star={t.star} />

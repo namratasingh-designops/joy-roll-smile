@@ -141,7 +141,7 @@ export function PlayerCard({
           className={`flex h-9 w-9 items-center justify-center rounded-full text-white ${COLOR_CLASS[player.color]}`}
           aria-hidden
         >
-          {COLOR_SYMBOL[player.color]}
+          {player.avatar}
         </span>
         <span className="font-display text-base text-ink">{player.name}</span>
         <span className="text-sm text-ink/70">
@@ -163,10 +163,10 @@ export function PlayerCard({
       }`}
     >
       <span
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl text-white ${COLOR_CLASS[player.color]}`}
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-3xl text-white ${COLOR_CLASS[player.color]}`}
         aria-hidden
       >
-        {COLOR_SYMBOL[player.color]}
+        {player.avatar}
       </span>
       <div className="min-w-0">
         <p className="truncate font-display text-xl text-ink">{player.name}</p>
@@ -263,6 +263,64 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
         </motion.span>
       )}
     </div>
+  );
+}
+
+/** Whose go it is and who comes next, as a row of faces in play order. */
+export function TurnOrderStrip({ compact = false }: { compact?: boolean }) {
+  const game = useGame((s) => s.game);
+  const reduced = useGame((s) => s.settings.reducedMotion);
+  if (!game) return null;
+  const turn = game.turn;
+  const next = (turn + 1) % game.players.length;
+
+  return (
+    <ul
+      className={`flex items-end justify-center rounded-3xl bg-panel/90 shadow-soft ${
+        compact ? "gap-1 px-3 py-1.5" : "gap-2 px-5 py-3"
+      }`}
+      aria-label="Turn order"
+    >
+      {game.players.map((p, i) => {
+        const active = i === turn;
+        const face = compact ? "h-10 w-10 text-2xl" : "h-14 w-14 text-3xl";
+        return (
+          <li key={p.color} className="flex flex-col items-center gap-1">
+            <span className={`font-display ${compact ? "text-xs" : "text-sm"} text-ink/70`}>
+              {i === next && !active ? "next" : ""}
+            </span>
+            <motion.span
+              layout={!reduced}
+              {...(reduced
+                ? {}
+                : {
+                    animate: { y: active ? -10 : 0, scale: active ? 1.25 : 1 },
+                    transition: { type: "spring" as const, stiffness: 300, damping: 20 },
+                  })}
+              className={`flex ${face} items-center justify-center rounded-full bg-white ${
+                active ? "ring-4" : "ring-2 ring-ink/10"
+              } ${active ? RING_CLASS[p.color] : ""}`}
+              style={active ? { boxShadow: `0 0 0 8px ${COLOR_HEX[p.color]}33` } : {}}
+            >
+              <span aria-hidden>{p.avatar}</span>
+            </motion.span>
+            <span
+              className={`h-2 w-8 rounded-full ${COLOR_CLASS[p.color]}`}
+              aria-hidden
+            />
+            <span className="sr-only">
+              {p.name}
+              {active ? ", playing now" : i === next ? ", next" : ""}
+            </span>
+            {i === next && !active && (
+              <span className={compact ? "text-base" : "text-xl"} aria-hidden>
+                👆
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

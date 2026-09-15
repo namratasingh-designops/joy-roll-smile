@@ -21,6 +21,7 @@ export function BoardFallback() {
   const phase = useGame((s) => s.phase);
   const choose = useGame((s) => s.chooseToken);
   const movable = phase === "choosing" ? moves.map((m) => m.tokenId) : [];
+  const inPlay = game?.players.map((p) => p.color) ?? COLORS;
 
   const tile = (cell: Cell, fill: string, key: string, star = false) => (
     <g key={key}>
@@ -52,14 +53,15 @@ export function BoardFallback() {
           width={6}
           height={6}
           rx={0.6}
-          fill={COLOR_HEX[c]}
+          fill={inPlay.includes(c) ? COLOR_HEX[c] : "#E7DCC7"}
+          opacity={inPlay.includes(c) ? 1 : 0.6}
         />
       ))}
       {LOOP.map((cell, i) => {
         const owner = COLORS.find((c) => START_INDEX[c] === i);
         return tile(cell, owner ? COLOR_HEX[owner] : "#FFFDF6", `l${i}`, STAR_LOOP_INDEXES.includes(i));
       })}
-      {COLORS.flatMap((c) => HOME_LANE[c].map((cell, i) => tile(cell, COLOR_HEX[c], `h${c}${i}`)))}
+      {inPlay.flatMap((c) => HOME_LANE[c].map((cell, i) => tile(cell, COLOR_HEX[c], `h${c}${i}`)))}
       {tile(CENTRE, "#FFF1C9", "centre")}
       {game?.players.flatMap((p) =>
         p.tokens.map((t) => {

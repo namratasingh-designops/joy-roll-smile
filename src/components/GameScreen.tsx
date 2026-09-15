@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "@/game/store";
 import { Mascot, SpeechBubble } from "./Mascot";
-import { ChunkyButton, HopCounter, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, ValuesStrip } from "./bits";
+import { ChunkyButton, HopCounter, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, TurnOrderStrip, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
 import { BoardFallback } from "./BoardFallback";
 import { BoardBoundary, retryImport } from "./BoardBoundary";
@@ -133,7 +133,15 @@ export function GameScreen() {
             </ul>
           </div>
 
-          <div className="order-1 flex w-full justify-center lg:order-none lg:col-start-2">{board}</div>
+          <div className="order-1 flex w-full flex-col items-center gap-2 lg:order-none lg:col-start-2">
+            {board}
+            <span className="lg:hidden">
+              <TurnOrderStrip compact />
+            </span>
+            <span className="hidden lg:block">
+              <TurnOrderStrip />
+            </span>
+          </div>
 
           <div className={`order-3 hidden lg:flex lg:justify-center lg:order-none ${settings.leftHanded ? "lg:col-start-1 lg:row-start-1" : ""}`}>
             {dicePanel}

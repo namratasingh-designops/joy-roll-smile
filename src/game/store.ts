@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import {
-  COLOR_NAME,
-  COLORS,
   type Color,
   HOME_STEPS,
   cellOf,
+  seatColors,
   squareLabel,
 } from "./board";
 import {
@@ -31,6 +30,7 @@ import { ensureAudioReady, setAudioSettings, sound, speak, stopVoice, unlockAudi
 export type Screen =
   | "splash"
   | "mode"
+  | "count"
   | "color"
   | "game"
   | "howto"
@@ -88,6 +88,24 @@ export const DEFAULT_SETTINGS: Settings = {
 const SETTINGS_KEY = "ludo.settings.v1";
 const STICKER_KEY = "ludo.stickers.v1";
 const SAVE_KEY = "ludo.save.v1";
+const COUNT_KEY = "ludo.players.v1";
+
+/** Cartoon faces children pick for themselves. */
+export const AVATARS = ["🦊", "🐼", "🐸", "🐰", "🐨", "🦄", "🐯", "🐵"];
+
+/** Computer friends get names and faces of their own. */
+export const BUDDY_NAMES: Record<Color, string> = {
+  blue: "Bo",
+  red: "Rosie",
+  green: "Gus",
+  yellow: "Yuna",
+};
+export const BUDDY_AVATARS: Record<Color, string> = {
+  blue: "🐬",
+  red: "🦊",
+  green: "🐸",
+  yellow: "🐥",
+};
 
 export const STICKERS = ["⭐", "🦁", "🌈", "🎈", "🍀", "🌻", "🐢", "🚀", "🍎", "🎨", "🐬", "🧩"];
 
@@ -96,6 +114,10 @@ interface Store {
   overlay: Overlay;
   game: GameState | null;
   mode: "buddies" | "family";
+  /** how many players the family/child chose (2, 3 or 4) */
+  playerCount: 2 | 3 | 4;
+  /** the line-up of the current game, replayed by "Play again" */
+  lastDefs: PlayerDef[] | null;
   phase: Phase;
   dice: number | null;
   diceRollKey: number;
@@ -120,7 +142,11 @@ interface Store {
   setSettings: (patch: Partial<Settings>) => void;
   setRules: (patch: Partial<RuleSettings>) => void;
   say: (text: string, mood?: MascotMood) => void;
-  startGame: (mode: "buddies" | "family", color: Color, humans?: number) => void;
+  setMode: (mode: "buddies" | "family") => void;
+  setPlayerCount: (n: 2 | 3 | 4) => void;
+  startGame: (mode: "buddies" | "family", defs: PlayerDef[]) => void;
+  startBuddies: (color: Color, avatar: string) => void;
+  startFamily: (picks: { color: Color; avatar: string }[]) => void;
   resume: () => void;
   roll: () => void;
   watchBuddy: () => void;
@@ -187,7 +213,27 @@ export const useGame = create<Store>((set, get) => {
   }
 
   /* ------------------------------- turn flow ------------------------------ */
-  function beginTurn(): void {
+  /** Leo names whoever is up, then the hand pointer nudges after a pause. */
+  function humanTurnPrompt(): void {
+    const game = get().game;
+    if (!game) return;
+    const player = currentPlayer(game);
+    say(
+      player.name === "You" ? "Now it's your turn!" : `Now it's ${player.name}'s turn!`,
+      "pointing",
+    );
+    set({ hint: "Tap the dice to roll!" });
+    later(() => {
+      if (get().phase === "idle" && !get().overlay) set({ showHandPointer: true });
+    }, 4000);
+  }
+
+  /**
+   * `handoff: false` for the very first turn and for rolling again after a six —
+   * the device does not change hands in either case.
+   */
+  function beginTurn(opts: { handoff?: boolean } = {}): void {
+    const handoff = opts.handoff ?? true;
     const game = get().game;
     if (!game) return;
     if (isGameOver(game)) {
@@ -199,16 +245,13 @@ export const useGame = create<Store>((set, get) => {
     persistSave();
 
     if (player.isHuman) {
-      if (get().mode === "family" && get().game!.players.filter((p) => p.isHuman).length > 1) {
+      const humans = game.players.filter((p) => p.isHuman).length;
+      if (handoff && get().mode === "family" && humans > 1) {
         set({ overlay: "handoff" });
         say(line(LINES.passDevice(player.name)), "pointing");
         return;
       }
-      say(line(LINES.yourTurn), "pointing");
-      set({ hint: "Tap the dice to roll!" });
-      later(() => {
-        if (get().phase === "idle") set({ showHandPointer: true });
-      }, 4000);
+      humanTurnPrompt();
     } else {
       say(line(LINES.turnOf(player.name)), "thinking");
       set({ hint: `${player.name} is thinking…` });
@@ -308,7 +351,7 @@ export const useGame = create<Store>((set, get) => {
         }
         if (extra) {
           say(line(LINES.sixCheer), "clapping");
-          later(beginTurn, 1200);
+          later(() => beginTurn({ handoff: false }), 1200);
         } else {
           later(() => endTurn(false), 1200);
         }
@@ -367,6 +410,8 @@ export const useGame = create<Store>((set, get) => {
     overlay: null,
     game: null,
     mode: "buddies",
+    playerCount: 2,
+    lastDefs: null,
     phase: "idle",
     dice: null,
     diceRollKey: 0,
@@ -398,10 +443,19 @@ export const useGame = create<Store>((set, get) => {
       } catch {
         hasSave = false;
       }
+      let playerCount: 2 | 3 | 4 = 2;
+      try {
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem(COUNT_KEY) : null;
+        const n = raw ? Number(JSON.parse(raw)) : 2;
+        if (n === 3 || n === 4) playerCount = n;
+      } catch {
+        playerCount = 2;
+      }
       set({
         settings: merged,
         stickers: Array.isArray(stickers) ? stickers : [],
         hasSave,
+        playerCount,
       });
     },
 
@@ -431,18 +485,22 @@ export const useGame = create<Store>((set, get) => {
 
     say,
 
-    startGame(mode, color, humans = 1) {
+    setMode(mode) {
+      set({ mode });
+    },
+
+    setPlayerCount(n) {
+      set({ playerCount: n });
+      save(COUNT_KEY, n);
+    },
+
+    startGame(mode, defs) {
       clearTimers();
-      const order: Color[] = [color, ...COLORS.filter((c) => c !== color)];
-      const defs: PlayerDef[] = order.map((c, i) => ({
-        color: c,
-        name: i === 0 ? "You" : COLOR_NAME[c],
-        isHuman: mode === "family" ? i < humans : i === 0,
-      }));
       const game = createGame(defs, get().settings.rules);
       set({
         game,
         mode,
+        lastDefs: defs,
         screen: "game",
         overlay: null,
         phase: "idle",
@@ -451,7 +509,30 @@ export const useGame = create<Store>((set, get) => {
         newSticker: null,
       });
       void unlockAudio();
-      beginTurn();
+      beginTurn({ handoff: false });
+    },
+
+    /** One child plus computer friends, seated for the chosen count. */
+    startBuddies(color, avatar) {
+      const seats = seatColors(get().playerCount, color);
+      const defs: PlayerDef[] = seats.map((c, i) => ({
+        color: c,
+        name: i === 0 ? "You" : BUDDY_NAMES[c],
+        avatar: i === 0 ? avatar : BUDDY_AVATARS[c],
+        isHuman: i === 0,
+      }));
+      get().startGame("buddies", defs);
+    },
+
+    /** Everyone on this device is a real person — no computer friends at all. */
+    startFamily(picks) {
+      const defs: PlayerDef[] = picks.map((p, i) => ({
+        color: p.color,
+        name: i === 0 ? "You" : `Player ${i + 1}`,
+        avatar: p.avatar,
+        isHuman: true,
+      }));
+      get().startGame("family", defs);
     },
 
     resume() {
@@ -468,7 +549,7 @@ export const useGame = create<Store>((set, get) => {
           dice: null,
         });
         void unlockAudio();
-        beginTurn();
+        beginTurn({ handoff: false });
       } catch {
         /* ignore */
       }
@@ -527,16 +608,28 @@ export const useGame = create<Store>((set, get) => {
       void unlockAudio();
       ensureAudioReady();
       sound.tap();
-      set({ overlay: null, hint: "Tap the dice to roll!" });
-      say(line(LINES.yourTurn), "pointing");
+      set({ overlay: null });
+      // the idle hand pointer is scheduled here, once the device has changed hands
+      humanTurnPrompt();
     },
 
     playAgain() {
-      const game = get().game;
-      const color = game?.players.find((p) => p.isHuman)?.color ?? "blue";
-      const mode = get().mode;
+      const { mode, lastDefs, game } = get();
       set({ newSticker: null });
-      get().startGame(mode, color, mode === "family" ? 2 : 1);
+      const defs: PlayerDef[] =
+        lastDefs ??
+        (game?.players.map((p) => ({
+          color: p.color,
+          name: p.name,
+          avatar: p.avatar,
+          isHuman: p.isHuman,
+        })) ??
+          []);
+      if (!defs.length) {
+        set({ screen: "mode" });
+        return;
+      }
+      get().startGame(mode, defs);
     },
 
     leaveGame() {
