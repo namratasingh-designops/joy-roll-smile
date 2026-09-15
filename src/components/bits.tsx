@@ -382,6 +382,7 @@ export function TokenButtons() {
   const moves = useGame((s) => s.moves);
   const phase = useGame((s) => s.phase);
   const choose = useGame((s) => s.chooseToken);
+  const selected = useGame((s) => s.selectedIndex);
   if (phase !== "choosing" || !moves.length) return null;
   return (
     <div className="pointer-events-auto flex flex-wrap justify-center gap-2">
@@ -390,16 +391,41 @@ export function TokenButtons() {
           key={m.tokenId}
           type="button"
           onClick={() => choose(m.tokenId)}
-          className="chunky touch-big bg-panel px-4 py-2 text-lg font-bold text-ink"
+          aria-current={i === selected ? "true" : undefined}
+          className={`chunky touch-big px-4 py-2 text-lg font-bold text-ink ${
+            i === selected ? `bg-play-yellow ring-4 ${RING_CLASS[m.color]}` : "bg-panel"
+          }`}
           style={{ borderBottom: `6px solid ${COLOR_HEX[m.color]}` }}
         >
           {COLOR_SYMBOL[m.color]} Token {i + 1}
           <span className="sr-only">
             {m.color} token, {m.from < 0 ? "in base" : `on square ${m.from + 1}`}, move to{" "}
             {m.to >= 57 ? "home" : `square ${m.to + 1}`}
+            {i === selected ? ", chosen" : ""}
           </span>
         </button>
       ))}
     </div>
+  );
+}
+
+/** Only on screen while a computer friend is playing: hurries that turn along. */
+export function SkipBuddyButton() {
+  const game = useGame((s) => s.game);
+  const skip = useGame((s) => s.skipBuddies);
+  const turbo = useGame((s) => s.turbo);
+  const player = game?.players[game.turn];
+  if (!game || !player || player.isHuman) return null;
+  return (
+    <button
+      type="button"
+      onClick={skip}
+      disabled={turbo}
+      className="chunky touch-big bg-panel px-5 py-2 font-display text-lg text-ink disabled:opacity-60"
+    >
+      <span aria-hidden>⏩ </span>
+      Skip
+      <span className="sr-only"> {player.name}'s turn</span>
+    </button>
   );
 }
