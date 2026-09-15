@@ -351,7 +351,7 @@ export const useGame = create<Store>((set, get) => {
         }
         if (extra) {
           say(line(LINES.sixCheer), "clapping");
-          later(beginTurn, 1200);
+          later(() => beginTurn({ handoff: false }), 1200);
         } else {
           later(() => endTurn(false), 1200);
         }
@@ -474,18 +474,22 @@ export const useGame = create<Store>((set, get) => {
 
     say,
 
-    startGame(mode, color, humans = 1) {
+    setMode(mode) {
+      set({ mode });
+    },
+
+    setPlayerCount(n) {
+      set({ playerCount: n });
+      save(COUNT_KEY, n);
+    },
+
+    startGame(mode, defs) {
       clearTimers();
-      const order: Color[] = [color, ...COLORS.filter((c) => c !== color)];
-      const defs: PlayerDef[] = order.map((c, i) => ({
-        color: c,
-        name: i === 0 ? "You" : COLOR_NAME[c],
-        isHuman: mode === "family" ? i < humans : i === 0,
-      }));
       const game = createGame(defs, get().settings.rules);
       set({
         game,
         mode,
+        lastDefs: defs,
         screen: "game",
         overlay: null,
         phase: "idle",
@@ -494,7 +498,30 @@ export const useGame = create<Store>((set, get) => {
         newSticker: null,
       });
       void unlockAudio();
-      beginTurn();
+      beginTurn({ handoff: false });
+    },
+
+    /** One child plus computer friends, seated for the chosen count. */
+    startBuddies(color, avatar) {
+      const seats = seatColors(get().playerCount, color);
+      const defs: PlayerDef[] = seats.map((c, i) => ({
+        color: c,
+        name: i === 0 ? "You" : BUDDY_NAMES[c],
+        avatar: i === 0 ? avatar : BUDDY_AVATARS[c],
+        isHuman: i === 0,
+      }));
+      get().startGame("buddies", defs);
+    },
+
+    /** Everyone on this device is a real person — no computer friends at all. */
+    startFamily(picks) {
+      const defs: PlayerDef[] = picks.map((p, i) => ({
+        color: p.color,
+        name: i === 0 ? "You" : `Player ${i + 1}`,
+        avatar: p.avatar,
+        isHuman: true,
+      }));
+      get().startGame("family", defs);
     },
 
     resume() {
@@ -570,16 +597,28 @@ export const useGame = create<Store>((set, get) => {
       void unlockAudio();
       ensureAudioReady();
       sound.tap();
-      set({ overlay: null, hint: "Tap the dice to roll!" });
-      say(line(LINES.yourTurn), "pointing");
+      set({ overlay: null });
+      // the idle hand pointer is scheduled here, once the device has changed hands
+      humanTurnPrompt();
     },
 
     playAgain() {
-      const game = get().game;
-      const color = game?.players.find((p) => p.isHuman)?.color ?? "blue";
-      const mode = get().mode;
+      const { mode, lastDefs, game } = get();
       set({ newSticker: null });
-      get().startGame(mode, color, mode === "family" ? 2 : 1);
+      const defs: PlayerDef[] =
+        lastDefs ??
+        (game?.players.map((p) => ({
+          color: p.color,
+          name: p.name,
+          avatar: p.avatar,
+          isHuman: p.isHuman,
+        })) ??
+          []);
+      if (!defs.length) {
+        set({ screen: "mode" });
+        return;
+      }
+      get().startGame(mode, defs);
     },
 
     leaveGame() {
