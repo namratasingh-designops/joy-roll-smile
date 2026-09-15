@@ -134,7 +134,7 @@ export function PlayerCard({
     return (
       <div
         className={`flex items-center gap-2 rounded-2xl bg-panel px-3 py-2 shadow-soft ${
-          active ? "ring-4 ring-play-blue" : ""
+          active ? `ring-4 ${RING_CLASS[player.color]}` : ""
         }`}
       >
         <span
@@ -159,7 +159,7 @@ export function PlayerCard({
             transition: { type: "spring" as const, stiffness: 260, damping: 18 },
           })}
       className={`flex items-center gap-3 rounded-3xl px-4 py-3 shadow-soft ${
-        active ? "bg-sky/70 ring-4 ring-play-blue" : "bg-panel"
+        active ? `bg-sky/70 ring-4 ${RING_CLASS[player.color]}` : "bg-panel"
       }`}
     >
       <span
@@ -180,7 +180,24 @@ export function PlayerCard({
               aria-hidden
             />
           ))}
-          {active && <span className="ml-2 font-display text-sm text-ink">Your turn!</span>}
+          {active && player.isHuman && (
+            <span className="ml-2 font-display text-sm text-ink">Your turn!</span>
+          )}
+          {active && !player.isHuman && (
+            <span className="ml-2 flex items-center gap-1 font-display text-sm text-ink">
+              Thinking
+              <motion.span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-ink"
+                aria-hidden
+                {...(reduced
+                  ? {}
+                  : {
+                      animate: { opacity: [0.2, 1, 0.2] },
+                      transition: { duration: 1, repeat: Infinity },
+                    })}
+              />
+            </span>
+          )}
         </div>
       </div>
       <span className="sr-only">
