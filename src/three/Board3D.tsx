@@ -52,9 +52,19 @@ function Tile({
   );
 }
 
-function BasePad({ color }: { color: Color }) {
+function BasePad({ color, inPlay }: { color: Color; inPlay: boolean }) {
   const origin = BASE_ORIGIN[color];
   const [x, z] = pos([origin[0] + 2.5, origin[1] + 2.5]);
+  if (!inPlay) {
+    // an empty corner: dim, flat and with no token slots, so it reads as "not in play"
+    return (
+      <group position={[x, 0.14, z]}>
+        <RoundedBox args={[6, 0.1, 6]} radius={0.35} smoothness={2}>
+          <meshStandardMaterial color="#E7DCC7" roughness={0.85} />
+        </RoundedBox>
+      </group>
+    );
+  }
   return (
     <group position={[x, 0.18, z]}>
       <RoundedBox args={[6, 0.22, 6]} radius={0.35} smoothness={3}>
