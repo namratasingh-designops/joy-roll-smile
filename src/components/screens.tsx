@@ -619,10 +619,64 @@ export function SoundTest() {
 
 /* ------------------------------- overlays -------------------------------- */
 
-function Modal({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * Dialog with a focus trap: focus starts on the first button, Tab stays inside,
+ * Escape closes this dialog (never stacks another) and focus goes back after.
+ */
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose?: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const setOverlay = useGame((s) => s.setOverlay);
+  const close = onClose ?? (() => setOverlay(null));
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        ref.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      previous?.focus?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
       <motion.div
+        ref={ref}
         initial={{ scale: 0.85, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         role="dialog"
