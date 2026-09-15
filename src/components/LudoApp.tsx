@@ -54,10 +54,15 @@ export default function LudoApp() {
     return () => clearTimeout(t);
   }, [settings.breakReminder, screen, setOverlay]);
 
-  const classes = [settings.highContrast ? "hc" : "", settings.largerUI ? "bigger-ui" : ""].join(" ");
+  // rem-based text only grows if the root font size grows
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("bigger-ui", settings.largerUI);
+    return () => root.classList.remove("bigger-ui");
+  }, [settings.largerUI]);
 
   return (
-    <div className={`min-h-dvh bg-panel text-ink ${classes}`}>
+    <div className={`min-h-dvh bg-panel text-ink ${settings.highContrast ? "hc" : ""}`}>
       <KeyboardControls />
       {screen === "splash" && <Splash />}
       {screen === "mode" && <ModeSelect />}
