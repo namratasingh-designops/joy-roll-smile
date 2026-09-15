@@ -180,10 +180,26 @@ export function resumeAllAudio() {
 
 /* ---------------------------------- voice --------------------------------- */
 
-function duckMusic(down: boolean) {
+/**
+ * Queued counting words fire several utterances in a row, so ducking is
+ * reference counted: the music only comes back up when nothing is speaking.
+ */
+let speaking = 0;
+
+function applyDuck() {
   if (!musicGain) return;
-  const base = settings.music ? settings.musicVolume * 0.25 : 0;
-  musicGain.gain.rampTo(down ? base * 0.35 : base, 0.2);
+  const base = musicLevel();
+  musicGain.gain.rampTo(speaking > 0 ? base * 0.35 : base, 0.2);
+}
+
+function duckStart() {
+  speaking++;
+  if (speaking === 1) applyDuck();
+}
+
+function duckEnd() {
+  speaking = Math.max(0, speaking - 1);
+  if (speaking === 0) applyDuck();
 }
 
 /**
@@ -197,9 +213,23 @@ export function speak(text: string, opts: { queue?: boolean } = {}) {
     u.rate = settings.voiceRate;
     u.pitch = 1.15;
     u.volume = settings.voiceVolume;
-    u.onstart = () => duckMusic(true);
-    u.onend = () => duckMusic(false);
-    if (!opts.queue) window.speechSynthesis.cancel();
+    let counted = false;
+    u.onstart = () => {
+      counted = true;
+      duckStart();
+    };
+    const done = () => {
+      if (counted) {
+        counted = false;
+        duckEnd();
+      }
+    };
+    u.onend = done;
+    u.onerror = done;
+    if (!opts.queue) {
+      speaking = 0;
+      window.speechSynthesis.cancel();
+    }
     window.speechSynthesis.speak(u);
   } catch {
     /* ignore */
