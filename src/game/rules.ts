@@ -43,6 +43,8 @@ export interface Player {
   color: Color;
   name: string;
   isHuman: boolean;
+  /** cartoon face shown on cards, handoff and the turn-order strip */
+  avatar: string;
   tokens: Token[];
   /** consecutive turns where no move was possible (drives "Lucky roll!") */
   stuckTurns: number;
@@ -76,6 +78,7 @@ export interface PlayerDef {
   color: Color;
   name: string;
   isHuman: boolean;
+  avatar?: string;
 }
 
 export function createGame(defs: PlayerDef[], rules: RuleSettings): GameState {
@@ -84,6 +87,7 @@ export function createGame(defs: PlayerDef[], rules: RuleSettings): GameState {
       color: d.color,
       name: d.name,
       isHuman: d.isHuman,
+      avatar: d.avatar ?? "🙂",
       stuckTurns: 0,
       tokens: Array.from({ length: rules.tokensPerPlayer }, (_, i) => ({
         id: `${d.color}-${i + 1}`,

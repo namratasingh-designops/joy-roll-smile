@@ -130,6 +130,25 @@ export const STAR_LOOP_INDEXES: number[] = COLORS.map(
   (c) => (START_INDEX[c] + 8) % LOOP.length,
 );
 
+/** Diagonally opposite corner, so a two-player race is symmetrical. */
+export const DIAGONAL: Record<Color, Color> = {
+  blue: "green",
+  green: "blue",
+  red: "yellow",
+  yellow: "red",
+};
+
+/** Clockwise seating order around the board. */
+export const SEAT_ORDER: Color[] = ["blue", "red", "green", "yellow"];
+
+/** Which corners are in play for a given player count, starting from `first`. */
+export function seatColors(count: number, first: Color): Color[] {
+  if (count <= 2) return [first, DIAGONAL[first]];
+  const i = SEAT_ORDER.indexOf(first);
+  const cycle = Array.from({ length: 4 }, (_, k) => SEAT_ORDER[(i + k) % 4]!);
+  return count >= 4 ? cycle : cycle.slice(0, 3);
+}
+
 export function isSafeLoopIndex(i: number): boolean {
   return SAFE_LOOP_INDEXES.includes(i);
 }
