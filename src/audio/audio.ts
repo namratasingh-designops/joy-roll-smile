@@ -104,11 +104,12 @@ export const sound = {
     if (settings.sound && noise) noise.triggerAttackRelease("16n");
   },
   hop(index: number) {
-    const scale = ["C5", "D5", "E5", "G5", "A5", "C6"];
+    // top of the scale kept below C6 — that band is piercing on headphones
+    const scale = ["C5", "D5", "E5", "G5", "A5", "B5"];
     note(scale[Math.min(index, scale.length - 1)] ?? "C5", "32n", 0.6);
   },
   star() {
-    if (settings.sound && started && bell) bell.triggerAttackRelease("C6", "8n");
+    if (settings.sound && started && bell) bell.triggerAttackRelease("C5", "8n");
   },
   boing() {
     if (!settings.sound || !started || !sfx) return;
@@ -119,14 +120,14 @@ export const sound = {
   fanfare() {
     if (!settings.sound || !started || !sfx) return;
     const now = Tone.now();
-    ["C5", "E5", "G5", "C6"].forEach((n, i) =>
+    ["C4", "E4", "G4", "C5"].forEach((n, i) =>
       sfx!.triggerAttackRelease(n, "8n", now + i * 0.11, 0.7 * settings.soundVolume),
     );
   },
   win() {
     if (!settings.sound || !started || !sfx) return;
     const now = Tone.now();
-    ["C5", "D5", "E5", "G5", "A5", "C6", "E6"].forEach((n, i) =>
+    ["C4", "D4", "E4", "G4", "A4", "C5", "E5"].forEach((n, i) =>
       sfx!.triggerAttackRelease(n, "8n", now + i * 0.13, 0.75 * settings.soundVolume),
     );
   },
