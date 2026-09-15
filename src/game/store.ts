@@ -277,20 +277,48 @@ export const useGame = create<Store>((set, get) => {
     }, 4000);
   }
 
+  /** how long this buddy takes to act (the Skip button speeds up one turn) */
+  function buddyDelay(factor = 1): number {
+    return (get().turbo ? 450 : get().settings.buddySpeed) * factor;
+  }
+
+  /**
+   * Friendly/Classic switches take effect immediately: the live settings are
+   * folded into the running game each turn. Pieces each cannot change mid-game.
+   */
+  function withLiveRules(game: GameState): GameState {
+    const s = get().settings.rules;
+    return {
+      ...game,
+      rules: { ...s, tokensPerPlayer: game.rules.tokensPerPlayer },
+    };
+  }
+
   /**
    * `handoff: false` for the very first turn and for rolling again after a six —
    * the device does not change hands in either case.
    */
   function beginTurn(opts: { handoff?: boolean } = {}): void {
     const handoff = opts.handoff ?? true;
-    const game = get().game;
-    if (!game) return;
+    const current = get().game;
+    if (!current) return;
+    const game = withLiveRules(current);
     if (isGameOver(game)) {
       finish();
       return;
     }
     const player = currentPlayer(game);
-    set({ phase: "idle", dice: null, moves: [], showHandPointer: false, hopCount: null });
+    set({
+      game,
+      phase: "idle",
+      dice: null,
+      moves: [],
+      selectedIndex: 0,
+      showHandPointer: false,
+      hopCount: null,
+      wiggleTokenId: null,
+      turbo: false,
+    });
     persistSave();
 
     if (player.isHuman) {
@@ -304,38 +332,62 @@ export const useGame = create<Store>((set, get) => {
     } else {
       say(line(LINES.turnOf(player.name)), "thinking");
       set({ hint: `${player.name} is thinking…` });
-      later(() => get().roll(), get().settings.buddySpeed);
+      later(() => get().roll(), buddyDelay());
     }
   }
 
+  /** No move possible: Leo says what would have helped and a token wiggles. */
+  function noMoveTurn(game: GameState, dice: number) {
+    const player = currentPlayer(game);
+    const stuckInBase = player.tokens.every((t) => t.steps < 0 || t.steps >= HOME_STEPS);
+    set({ phase: "resolving" });
+    if (player.isHuman) {
+      const first = player.tokens.find((t) => t.steps < 0) ?? player.tokens[0];
+      if (first) set({ wiggleTokenId: first.id });
+      say(line(stuckInBase ? LINES.needSix : LINES.needSmaller), "pointing");
+    } else {
+      say(line(LINES.noMoves), "surprised");
+    }
+    void dice;
+    set({ game: registerStuckTurn(game) });
+    later(() => {
+      set({ wiggleTokenId: null });
+      endTurn(false);
+    }, 1000);
+  }
+
   function resolveRoll(dice: number) {
-    const game = get().game!;
+    const game = withLiveRules(get().game!);
+    set({ game });
     const player = currentPlayer(game);
     const moves = legalMoves(game, dice);
 
     if (!moves.length) {
-      set({ phase: "resolving" });
-      say(line(LINES.noMoves), "surprised");
-      set({ game: registerStuckTurn(game) });
-      later(() => endTurn(false), 1400);
+      noMoveTurn(game, dice);
       return;
     }
 
-    if (moves.length === 1) {
+    // the mercy rule just fired: tell the child the game helped them
+    if (game.lucky && moves.some((m) => m.kind === "exit")) {
+      say(line(LINES.lucky), "cheering");
+    }
+
+    const autoSingle = !player.isHuman || get().settings.autoMoveSingle;
+    if (moves.length === 1 && autoSingle) {
       set({ moves, phase: "moving" });
       later(() => performMove(moves[0]!, dice), 600);
       return;
     }
 
     if (player.isHuman) {
-      set({ moves, phase: "choosing", hint: "Tap a glowing token!" });
+      set({ moves, phase: "choosing", selectedIndex: 0, hint: "Tap a glowing token!" });
       say(line(LINES.chooseToken), "pointing");
       later(() => {
         if (get().phase === "choosing") set({ showHandPointer: true });
       }, 4000);
     } else {
       set({ moves, phase: "moving" });
-      later(() => performMove(pickBuddyMove(moves)!, dice), get().settings.buddySpeed * 0.6);
+      later(() => performMove(pickBuddyMove(moves)!, dice), buddyDelay(0.6));
     }
   }
 
