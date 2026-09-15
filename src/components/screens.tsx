@@ -765,12 +765,27 @@ export function GrownUpSettings() {
   const set = useGame((st) => st.setSettings);
   const setRules = useGame((st) => st.setRules);
   const setOverlay = useGame((st) => st.setOverlay);
+  const setDifficulty = useGame((st) => st.setDifficulty);
+  const game = useGame((st) => st.game);
+  const count = useGame((st) => st.playerCount);
+  const tokens = s.tokensAuto ? tokensForCount(count) : s.rules.tokensPerPlayer;
+  const longGame = count === 4 && tokens === 4;
   return (
     <Modal title="Grown-up settings">
-      <Row label="Tokens each">
-        <Choice on={s.rules.tokensPerPlayer === 2} onClick={() => setRules({ tokensPerPlayer: 2 })}>2</Choice>
-        <Choice on={s.rules.tokensPerPlayer === 4} onClick={() => setRules({ tokensPerPlayer: 4 })}>4</Choice>
+      <Row label="Level">
+        <Choice on={s.difficulty === "starting"} onClick={() => setDifficulty("starting")}>Just starting</Choice>
+        <Choice on={s.difficulty === "know"} onClick={() => setDifficulty("know")}>I know Ludo</Choice>
       </Row>
+      <Row label="Pieces each">
+        <Choice on={s.tokensAuto} onClick={() => set({ tokensAuto: true })}>Automatic</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 2} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 2 }); }}>2</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 3} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 3 }); }}>3</Choice>
+        <Choice on={!s.tokensAuto && s.rules.tokensPerPlayer === 4} onClick={() => { set({ tokensAuto: false }); setRules({ tokensPerPlayer: 4 }); }}>4</Choice>
+      </Row>
+      <p className="text-base text-ink/70">
+        {count} players · {tokens} pieces each · about {estimateMinutes(count, tokens)} minutes
+        {longGame && " — that's a long sitting for a young child."}
+      </p>
       <Row label="Rules">
         <Choice on={s.rules.easyExit && s.rules.easyFinish} onClick={() => setRules({ easyExit: true, easyFinish: true })}>Easy</Choice>
         <Choice on={!s.rules.easyExit && !s.rules.easyFinish} onClick={() => setRules({ easyExit: false, easyFinish: false })}>Classic</Choice>
@@ -779,6 +794,15 @@ export function GrownUpSettings() {
         <Choice on={s.rules.friendly} onClick={() => setRules({ friendly: true })}>On</Choice>
         <Choice on={!s.rules.friendly} onClick={() => setRules({ friendly: false })}>Off</Choice>
       </Row>
+      <Row label="Help with the only move">
+        <Choice on={s.autoMoveSingle} onClick={() => set({ autoMoveSingle: true })}>On</Choice>
+        <Choice on={!s.autoMoveSingle} onClick={() => set({ autoMoveSingle: false })}>Off</Choice>
+      </Row>
+      {game && (
+        <p className="text-base text-ink/70">
+          Rules changes apply right away; the number of pieces applies to the next game.
+        </p>
+      )}
       <Row label="Buddy speed">
         <Choice on={s.buddySpeed >= 2600} onClick={() => set({ buddySpeed: 2600 })}>Slow</Choice>
         <Choice on={s.buddySpeed === 2000} onClick={() => set({ buddySpeed: 2000 })}>Normal</Choice>
