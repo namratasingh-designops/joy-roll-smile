@@ -13,6 +13,13 @@ const COLOR_CLASS: Record<Color, string> = {
   yellow: "bg-play-yellow",
 };
 
+const RING_CLASS: Record<Color, string> = {
+  blue: "ring-play-blue",
+  red: "ring-play-red",
+  green: "ring-play-green",
+  yellow: "ring-play-yellow",
+};
+
 export function ChunkyButton({
   children,
   onClick,
