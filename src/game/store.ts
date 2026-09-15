@@ -468,6 +468,7 @@ export const useGame = create<Store>((set, get) => {
     settings: DEFAULT_SETTINGS,
     stickers: [],
     newSticker: null,
+    earnedHomeSticker: false,
     showHandPointer: false,
     hasSave: false,
     tutorialStep: 0,
