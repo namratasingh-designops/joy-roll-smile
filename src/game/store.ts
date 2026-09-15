@@ -22,6 +22,7 @@ import {
   playerDone,
   registerStuckTurn,
   rollDie,
+  tokensForCount,
   tokensHome,
 } from "./rules";
 import { LINES, line } from "./lines";
@@ -51,6 +52,9 @@ export type MascotMood =
   | "waving"
   | "pointing";
 
+/** "starting" = gentle five-year-old play, "know" = a real game for 7-8s. */
+export type Difficulty = "starting" | "know";
+
 export interface Settings {
   sound: boolean;
   music: boolean;
@@ -65,6 +69,11 @@ export interface Settings {
   largerUI: boolean;
   leftHanded: boolean;
   breakReminder: boolean;
+  difficulty: Difficulty;
+  /** pieces follow the player count unless a grown-up picks a number by hand */
+  tokensAuto: boolean;
+  /** move straight away when there is only one option (off for older children) */
+  autoMoveSingle: boolean;
   rules: RuleSettings;
 }
 
@@ -74,7 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
   voice: true,
   soundVolume: 0.8,
   musicVolume: 0.3,
-  voiceVolume: 1,
+  voiceVolume: 0.85,
   voiceRate: 0.9,
   buddySpeed: 2000,
   reducedMotion: false,
@@ -82,6 +91,9 @@ export const DEFAULT_SETTINGS: Settings = {
   largerUI: false,
   leftHanded: false,
   breakReminder: true,
+  difficulty: "starting",
+  tokensAuto: true,
+  autoMoveSingle: true,
   rules: DEFAULT_RULES,
 };
 
@@ -138,9 +150,15 @@ interface Store {
   dice: number | null;
   diceRollKey: number;
   moves: Move[];
+  /** index of the move highlighted by keyboard play */
+  selectedIndex: number;
   /** steps value used for rendering while a token hops */
   visual: Record<string, number>;
   hopCount: number | null;
+  /** token given a hopeful wiggle when no move was possible */
+  wiggleTokenId: string | null;
+  /** this buddy turn only: play it out quickly */
+  turbo: boolean;
   caption: string;
   hint: string;
   mood: MascotMood;
@@ -159,6 +177,7 @@ interface Store {
   setOverlay: (o: Overlay) => void;
   setSettings: (patch: Partial<Settings>) => void;
   setRules: (patch: Partial<RuleSettings>) => void;
+  setDifficulty: (d: Difficulty) => void;
   say: (text: string, mood?: MascotMood) => void;
   setMode: (mode: "buddies" | "family") => void;
   setPlayerCount: (n: 2 | 3 | 4) => void;
@@ -169,6 +188,7 @@ interface Store {
   roll: () => void;
   watchBuddy: () => void;
   chooseToken: (tokenId: string) => void;
+  setSelectedIndex: (n: number) => void;
   skipBuddies: () => void;
   confirmHandoff: () => void;
   playAgain: () => void;
@@ -257,20 +277,48 @@ export const useGame = create<Store>((set, get) => {
     }, 4000);
   }
 
+  /** how long this buddy takes to act (the Skip button speeds up one turn) */
+  function buddyDelay(factor = 1): number {
+    return (get().turbo ? 450 : get().settings.buddySpeed) * factor;
+  }
+
+  /**
+   * Friendly/Classic switches take effect immediately: the live settings are
+   * folded into the running game each turn. Pieces each cannot change mid-game.
+   */
+  function withLiveRules(game: GameState): GameState {
+    const s = get().settings.rules;
+    return {
+      ...game,
+      rules: { ...s, tokensPerPlayer: game.rules.tokensPerPlayer },
+    };
+  }
+
   /**
    * `handoff: false` for the very first turn and for rolling again after a six —
    * the device does not change hands in either case.
    */
   function beginTurn(opts: { handoff?: boolean } = {}): void {
     const handoff = opts.handoff ?? true;
-    const game = get().game;
-    if (!game) return;
+    const current = get().game;
+    if (!current) return;
+    const game = withLiveRules(current);
     if (isGameOver(game)) {
       finish();
       return;
     }
     const player = currentPlayer(game);
-    set({ phase: "idle", dice: null, moves: [], showHandPointer: false, hopCount: null });
+    set({
+      game,
+      phase: "idle",
+      dice: null,
+      moves: [],
+      selectedIndex: 0,
+      showHandPointer: false,
+      hopCount: null,
+      wiggleTokenId: null,
+      turbo: false,
+    });
     persistSave();
 
     if (player.isHuman) {
@@ -284,38 +332,62 @@ export const useGame = create<Store>((set, get) => {
     } else {
       say(line(LINES.turnOf(player.name)), "thinking");
       set({ hint: `${player.name} is thinking…` });
-      later(() => get().roll(), get().settings.buddySpeed);
+      later(() => get().roll(), buddyDelay());
     }
   }
 
+  /** No move possible: Leo says what would have helped and a token wiggles. */
+  function noMoveTurn(game: GameState, dice: number) {
+    const player = currentPlayer(game);
+    const stuckInBase = player.tokens.every((t) => t.steps < 0 || t.steps >= HOME_STEPS);
+    set({ phase: "resolving" });
+    if (player.isHuman) {
+      const first = player.tokens.find((t) => t.steps < 0) ?? player.tokens[0];
+      if (first) set({ wiggleTokenId: first.id });
+      say(line(stuckInBase ? LINES.needSix : LINES.needSmaller), "pointing");
+    } else {
+      say(line(LINES.noMoves), "surprised");
+    }
+    void dice;
+    set({ game: registerStuckTurn(game) });
+    later(() => {
+      set({ wiggleTokenId: null });
+      endTurn(false);
+    }, 1000);
+  }
+
   function resolveRoll(dice: number) {
-    const game = get().game!;
+    const game = withLiveRules(get().game!);
+    set({ game });
     const player = currentPlayer(game);
     const moves = legalMoves(game, dice);
 
     if (!moves.length) {
-      set({ phase: "resolving" });
-      say(line(LINES.noMoves), "surprised");
-      set({ game: registerStuckTurn(game) });
-      later(() => endTurn(false), 1400);
+      noMoveTurn(game, dice);
       return;
     }
 
-    if (moves.length === 1) {
+    // the mercy rule just fired: tell the child the game helped them
+    if (game.lucky && moves.some((m) => m.kind === "exit")) {
+      say(line(LINES.lucky), "cheering");
+    }
+
+    const autoSingle = !player.isHuman || get().settings.autoMoveSingle;
+    if (moves.length === 1 && autoSingle) {
       set({ moves, phase: "moving" });
       later(() => performMove(moves[0]!, dice), 600);
       return;
     }
 
     if (player.isHuman) {
-      set({ moves, phase: "choosing", hint: "Tap a glowing token!" });
+      set({ moves, phase: "choosing", selectedIndex: 0, hint: "Tap a glowing token!" });
       say(line(LINES.chooseToken), "pointing");
       later(() => {
         if (get().phase === "choosing") set({ showHandPointer: true });
       }, 4000);
     } else {
       set({ moves, phase: "moving" });
-      later(() => performMove(pickBuddyMove(moves)!, dice), get().settings.buddySpeed * 0.6);
+      later(() => performMove(pickBuddyMove(moves)!, dice), buddyDelay(0.6));
     }
   }
 
@@ -436,8 +508,12 @@ export const useGame = create<Store>((set, get) => {
     });
     sound.win();
     vibrate([40, 60, 80]);
-    const human = finished.players.find((p) => p.isHuman);
-    say(human ? line(LINES.win) : line(LINES.buddyWin(finished.players[0]!.name)), "cheering");
+    // the headline must match the medals: only first place gets a win line
+    const winner = finished.players.find((p) => p.color === ranking[0]);
+    if (winner && winner.name === "You") say(line(LINES.win), "cheering");
+    else if (winner)
+      say(`${line(LINES.buddyWin(winner.name))} ${line(LINES.goodTry)}`, "clapping");
+    else say(line(LINES.goodTry), "clapping");
   }
 
   function persistSave() {
@@ -459,8 +535,11 @@ export const useGame = create<Store>((set, get) => {
     dice: null,
     diceRollKey: 0,
     moves: [],
+    selectedIndex: 0,
     visual: {},
     hopCount: null,
+    wiggleTokenId: null,
+    turbo: false,
     caption: "Hello friend! Let's play Ludo!",
     hint: "Tap to play!",
     mood: "waving",
@@ -511,9 +590,18 @@ export const useGame = create<Store>((set, get) => {
       if (screen === "splash") say(line(LINES.welcome), "waving");
     },
 
+    /** Opening a dialog pauses the game; closing it picks the turn back up. */
     setOverlay(o) {
       sound.tap();
-      set({ overlay: o });
+      if (o) {
+        clearTimers();
+        stopVoice();
+        set({ overlay: o, showHandPointer: false });
+        return;
+      }
+      set({ overlay: null });
+      const { game, screen } = get();
+      if (game && screen === "game" && !isGameOver(game)) beginTurn({ handoff: false });
     },
 
     setSettings(patch) {
@@ -525,6 +613,28 @@ export const useGame = create<Store>((set, get) => {
 
     setRules(patch) {
       get().setSettings({ rules: { ...get().settings.rules, ...patch } });
+    },
+
+    /** "I know Ludo": four pieces, classic rules, quicker buddies, real choices. */
+    setDifficulty(d) {
+      const s = get().settings;
+      if (d === "know") {
+        get().setSettings({
+          difficulty: "know",
+          tokensAuto: false,
+          autoMoveSingle: false,
+          buddySpeed: 1200,
+          rules: { ...s.rules, tokensPerPlayer: 4, easyExit: false, easyFinish: false },
+        });
+      } else {
+        get().setSettings({
+          difficulty: "starting",
+          tokensAuto: true,
+          autoMoveSingle: true,
+          buddySpeed: 2000,
+          rules: { ...s.rules, easyExit: true, easyFinish: true },
+        });
+      }
     },
 
     say,
@@ -540,7 +650,11 @@ export const useGame = create<Store>((set, get) => {
 
     startGame(mode, defs) {
       clearTimers();
-      const game = createGame(defs, get().settings.rules);
+      const s = get().settings;
+      const tokensPerPlayer = s.tokensAuto
+        ? tokensForCount(Math.min(4, Math.max(2, defs.length)) as 2 | 3 | 4)
+        : s.rules.tokensPerPlayer;
+      const game = createGame(defs, { ...s.rules, tokensPerPlayer });
       set({
         game,
         mode,
@@ -552,6 +666,8 @@ export const useGame = create<Store>((set, get) => {
         dice: null,
         newSticker: null,
         earnedHomeSticker: false,
+        wiggleTokenId: null,
+        turbo: false,
       });
       void unlockAudio();
       beginTurn({ handoff: false });
@@ -643,10 +759,17 @@ export const useGame = create<Store>((set, get) => {
       performMove(move, dice);
     },
 
+    setSelectedIndex(n) {
+      set({ selectedIndex: n });
+    },
+
+    /** Speeds up only the buddy turn happening right now; saved settings stay. */
     skipBuddies() {
       const game = get().game;
       if (!game) return;
-      if (!currentPlayer(game).isHuman) set({ settings: { ...get().settings, buddySpeed: 700 } });
+      if (currentPlayer(game).isHuman) return;
+      sound.tap();
+      set({ turbo: true });
     },
 
     confirmHandoff() {

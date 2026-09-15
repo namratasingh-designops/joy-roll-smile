@@ -21,19 +21,27 @@ let noise: Tone.NoiseSynth | null = null;
 let marimba: Tone.PolySynth | null = null;
 let musicLoop: Tone.Loop | null = null;
 let musicGain: Tone.Gain | null = null;
+let limiter: Tone.Limiter | null = null;
 let settings: AudioSettings = {
   sound: true,
   music: true,
   voice: true,
   soundVolume: 0.8,
   musicVolume: 0.3,
-  voiceVolume: 1,
+  voiceVolume: 0.85,
   voiceRate: 0.9,
 };
 
+/** Music sits ~12dB under the effects (0.25 of their amplitude), not 25dB. */
+const MUSIC_FACTOR = 0.85;
+
+function musicLevel() {
+  return settings.music ? settings.musicVolume * MUSIC_FACTOR : 0;
+}
+
 export function setAudioSettings(next: AudioSettings) {
   settings = next;
-  if (musicGain) musicGain.gain.rampTo(next.music ? next.musicVolume * 0.25 : 0, 0.3);
+  if (musicGain) musicGain.gain.rampTo(musicLevel(), 0.3);
   if (!next.voice) stopVoice();
   if (started && next.music) startMusic();
 }
@@ -43,22 +51,24 @@ export async function unlockAudio() {
   try {
     await Tone.start();
     Tone.getDestination().volume.value = -6;
+    // a gentle limiter so overlapping fanfares and hops can never clip
+    limiter = new Tone.Limiter(-3).toDestination();
     sfx = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: "triangle" },
       envelope: { attack: 0.005, decay: 0.18, sustain: 0.02, release: 0.2 },
-    }).toDestination();
+    }).connect(limiter);
     bell = new Tone.MetalSynth({
       envelope: { attack: 0.001, decay: 0.5, release: 0.2 },
       harmonicity: 6,
       resonance: 3000,
-    }).toDestination();
+    }).connect(limiter);
     bell.volume.value = -22;
     noise = new Tone.NoiseSynth({
       noise: { type: "brown" },
       envelope: { attack: 0.005, decay: 0.16, sustain: 0 },
-    }).toDestination();
+    }).connect(limiter);
     noise.volume.value = -16;
-    musicGain = new Tone.Gain(settings.music ? settings.musicVolume * 0.25 : 0).toDestination();
+    musicGain = new Tone.Gain(musicLevel()).connect(limiter);
     marimba = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: "sine" },
       envelope: { attack: 0.01, decay: 0.5, sustain: 0.05, release: 0.6 },
@@ -94,11 +104,12 @@ export const sound = {
     if (settings.sound && noise) noise.triggerAttackRelease("16n");
   },
   hop(index: number) {
-    const scale = ["C5", "D5", "E5", "G5", "A5", "C6"];
+    // top of the scale kept below C6 — that band is piercing on headphones
+    const scale = ["C5", "D5", "E5", "G5", "A5", "B5"];
     note(scale[Math.min(index, scale.length - 1)] ?? "C5", "32n", 0.6);
   },
   star() {
-    if (settings.sound && started && bell) bell.triggerAttackRelease("C6", "8n");
+    if (settings.sound && started && bell) bell.triggerAttackRelease("C5", "8n");
   },
   boing() {
     if (!settings.sound || !started || !sfx) return;
@@ -109,14 +120,14 @@ export const sound = {
   fanfare() {
     if (!settings.sound || !started || !sfx) return;
     const now = Tone.now();
-    ["C5", "E5", "G5", "C6"].forEach((n, i) =>
+    ["C4", "E4", "G4", "C5"].forEach((n, i) =>
       sfx!.triggerAttackRelease(n, "8n", now + i * 0.11, 0.7 * settings.soundVolume),
     );
   },
   win() {
     if (!settings.sound || !started || !sfx) return;
     const now = Tone.now();
-    ["C5", "D5", "E5", "G5", "A5", "C6", "E6"].forEach((n, i) =>
+    ["C4", "D4", "E4", "G4", "A4", "C5", "E5"].forEach((n, i) =>
       sfx!.triggerAttackRelease(n, "8n", now + i * 0.13, 0.75 * settings.soundVolume),
     );
   },
@@ -169,10 +180,26 @@ export function resumeAllAudio() {
 
 /* ---------------------------------- voice --------------------------------- */
 
-function duckMusic(down: boolean) {
+/**
+ * Queued counting words fire several utterances in a row, so ducking is
+ * reference counted: the music only comes back up when nothing is speaking.
+ */
+let speaking = 0;
+
+function applyDuck() {
   if (!musicGain) return;
-  const base = settings.music ? settings.musicVolume * 0.25 : 0;
-  musicGain.gain.rampTo(down ? base * 0.35 : base, 0.2);
+  const base = musicLevel();
+  musicGain.gain.rampTo(speaking > 0 ? base * 0.35 : base, 0.2);
+}
+
+function duckStart() {
+  speaking++;
+  if (speaking === 1) applyDuck();
+}
+
+function duckEnd() {
+  speaking = Math.max(0, speaking - 1);
+  if (speaking === 0) applyDuck();
 }
 
 /**
@@ -186,9 +213,23 @@ export function speak(text: string, opts: { queue?: boolean } = {}) {
     u.rate = settings.voiceRate;
     u.pitch = 1.15;
     u.volume = settings.voiceVolume;
-    u.onstart = () => duckMusic(true);
-    u.onend = () => duckMusic(false);
-    if (!opts.queue) window.speechSynthesis.cancel();
+    let counted = false;
+    u.onstart = () => {
+      counted = true;
+      duckStart();
+    };
+    const done = () => {
+      if (counted) {
+        counted = false;
+        duckEnd();
+      }
+    };
+    u.onend = done;
+    u.onerror = done;
+    if (!opts.queue) {
+      speaking = 0;
+      window.speechSynthesis.cancel();
+    }
     window.speechSynthesis.speak(u);
   } catch {
     /* ignore */
@@ -203,7 +244,8 @@ export function stopVoice() {
       /* ignore */
     }
   }
-  duckMusic(false);
+  speaking = 0;
+  applyDuck();
 }
 
 export function vibrate(pattern: number | number[]) {

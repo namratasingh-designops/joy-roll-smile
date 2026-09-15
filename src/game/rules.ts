@@ -14,8 +14,8 @@ import {
 export type { Color };
 
 export interface RuleSettings {
-  /** tokens per player: 2 (kid) or 4 (classic) */
-  tokensPerPlayer: 2 | 4;
+  /** tokens per player: 2, 3 or 4 (usually derived from the player count) */
+  tokensPerPlayer: 2 | 3 | 4;
   /** easy: a 1 or a 6 leaves base. classic: only a 6 */
   easyExit: boolean;
   /** easy: reaching or passing home counts. classic: exact roll */
@@ -25,11 +25,24 @@ export interface RuleSettings {
 }
 
 export const DEFAULT_RULES: RuleSettings = {
-  tokensPerPlayer: 2,
+  tokensPerPlayer: 4,
   easyExit: true,
   easyFinish: true,
   friendly: false,
 };
+
+/**
+ * Pieces each, tied to the player count so the game keeps roughly the same
+ * length and the same short wait between a child's turns.
+ */
+export function tokensForCount(count: 2 | 3 | 4): 2 | 3 | 4 {
+  return count === 2 ? 4 : count === 3 ? 3 : 2;
+}
+
+/** Rough playing time in whole minutes, used on the "How many players?" screen. */
+export function estimateMinutes(count: 2 | 3 | 4, tokens: 2 | 3 | 4): number {
+  return Math.round(tokens * 3 * (count / 2));
+}
 
 export interface Token {
   id: string;
@@ -284,7 +297,8 @@ export function nextTurn(state: GameState): GameState {
     if (!playerDone(state.players[turn]!)) break;
   }
   const player = state.players[turn]!;
-  const lucky = state.rules.easyExit && player.stuckTurns >= 3;
+  // mercy rule: after two turns with nothing to do, any roll gets a token out
+  const lucky = state.rules.easyExit && player.stuckTurns >= 2;
   return { ...state, turn, dice: null, lucky };
 }
 
