@@ -180,23 +180,28 @@ export function GameScreen() {
   );
 }
 
-/** Keyboard play: space/enter rolls, arrows cycle tokens, escape pauses. */
+/**
+ * Keyboard play: space/enter rolls, arrows cycle tokens, escape pauses.
+ * The selected index lives in the store so the board and the token buttons can
+ * both show which token is picked out.
+ */
 export function KeyboardControls() {
   const roll = useGame((s) => s.roll);
   const moves = useGame((s) => s.moves);
   const phase = useGame((s) => s.phase);
   const choose = useGame((s) => s.chooseToken);
   const setOverlay = useGame((s) => s.setOverlay);
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => setIndex(0), [moves]);
+  const overlay = useGame((s) => s.overlay);
+  const index = useGame((s) => s.selectedIndex);
+  const setIndex = useGame((s) => s.setSelectedIndex);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const typing = target && ["INPUT", "TEXTAREA", "BUTTON"].includes(target.tagName);
       if (e.key === "Escape") {
-        setOverlay("exit");
+        // an open dialog handles its own Escape; never stack a second one
+        if (!overlay) setOverlay("exit");
         return;
       }
       if ((e.key === " " || e.key === "Enter") && !typing) {
@@ -205,15 +210,15 @@ export function KeyboardControls() {
         else if (phase === "choosing" && moves[index]) choose(moves[index].tokenId);
       }
       if (phase === "choosing" && (e.key === "ArrowRight" || e.key === "ArrowDown")) {
-        setIndex((i) => (i + 1) % moves.length);
+        setIndex((index + 1) % moves.length);
       }
       if (phase === "choosing" && (e.key === "ArrowLeft" || e.key === "ArrowUp")) {
-        setIndex((i) => (i - 1 + moves.length) % moves.length);
+        setIndex((index - 1 + moves.length) % moves.length);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phase, moves, index, roll, choose, setOverlay]);
+  }, [phase, moves, index, roll, choose, setOverlay, setIndex, overlay]);
 
   return null;
 }
