@@ -590,9 +590,18 @@ export const useGame = create<Store>((set, get) => {
       if (screen === "splash") say(line(LINES.welcome), "waving");
     },
 
+    /** Opening a dialog pauses the game; closing it picks the turn back up. */
     setOverlay(o) {
       sound.tap();
-      set({ overlay: o });
+      if (o) {
+        clearTimers();
+        stopVoice();
+        set({ overlay: o, showHandPointer: false });
+        return;
+      }
+      set({ overlay: null });
+      const { game, screen } = get();
+      if (game && screen === "game" && !isGameOver(game)) beginTurn({ handoff: false });
     },
 
     setSettings(patch) {
@@ -604,6 +613,28 @@ export const useGame = create<Store>((set, get) => {
 
     setRules(patch) {
       get().setSettings({ rules: { ...get().settings.rules, ...patch } });
+    },
+
+    /** "I know Ludo": four pieces, classic rules, quicker buddies, real choices. */
+    setDifficulty(d) {
+      const s = get().settings;
+      if (d === "know") {
+        get().setSettings({
+          difficulty: "know",
+          tokensAuto: false,
+          autoMoveSingle: false,
+          buddySpeed: 1200,
+          rules: { ...s.rules, tokensPerPlayer: 4, easyExit: false, easyFinish: false },
+        });
+      } else {
+        get().setSettings({
+          difficulty: "starting",
+          tokensAuto: true,
+          autoMoveSingle: true,
+          buddySpeed: 2000,
+          rules: { ...s.rules, easyExit: true, easyFinish: true },
+        });
+      }
     },
 
     say,
@@ -619,7 +650,11 @@ export const useGame = create<Store>((set, get) => {
 
     startGame(mode, defs) {
       clearTimers();
-      const game = createGame(defs, get().settings.rules);
+      const s = get().settings;
+      const tokensPerPlayer = s.tokensAuto
+        ? tokensForCount(Math.min(4, Math.max(2, defs.length)) as 2 | 3 | 4)
+        : s.rules.tokensPerPlayer;
+      const game = createGame(defs, { ...s.rules, tokensPerPlayer });
       set({
         game,
         mode,
@@ -631,6 +666,8 @@ export const useGame = create<Store>((set, get) => {
         dice: null,
         newSticker: null,
         earnedHomeSticker: false,
+        wiggleTokenId: null,
+        turbo: false,
       });
       void unlockAudio();
       beginTurn({ handoff: false });
