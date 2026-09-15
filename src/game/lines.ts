@@ -18,8 +18,13 @@ export const LINES = {
   turnOf: (name: string) => [`${name}'s turn!`, `Now it's ${name}!`],
   goodMove: ["Great counting!", "Nice choice!", "Super move!"],
   sixCheer: ["A six! Roll again!", "Six! One more roll!"],
-  win: ["You did it, superstar!", "Hooray! You did it!", "Amazing! Great playing!"],
-  buddyWin: (name: string) => [`${name} is home! Well played!`, `${name} finished. Great try!`],
+  win: ["You did it, superstar!", "Hooray! You did it!", "Amazing! You won!"],
+  /** for anyone who did not come first — warm, but never claims a win */
+  goodTry: ["Great playing!", "So close! Great playing!", "Well played, superstar!"],
+  buddyWin: (name: string) => [`${name} is home first!`, `${name} finished first!`],
+  /** what would have helped when nothing could move */
+  needSix: ["A six would get you out — next time!", "A six gets you out! Next time!"],
+  needSmaller: ["A smaller roll would help — next time!", "Nearly! A smaller roll next time!"],
   breakTime: ["Let's stretch together!", "Time to wiggle and stretch!"],
   passDevice: (name: string) => [`Pass it to ${name}!`, `${name}, your turn next!`],
   colorPicked: (name: string) => [`${name}! Good choice!`, `You are ${name}!`],
