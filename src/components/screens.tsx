@@ -139,34 +139,47 @@ export function PlayerCountSelect() {
     say("How many players?", "pointing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const auto = useGame((s) => s.settings.tokensAuto);
+  const manualTokens = useGame((s) => s.settings.rules.tokensPerPlayer);
   return (
     <Shell>
       <h1 className="font-display text-4xl text-ink">How many players?</h1>
       <div className="grid w-full gap-5 sm:grid-cols-3">
-        {([2, 3, 4] as const).map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-pressed={count === n}
-            onClick={() => {
-              sound.tap();
-              setCount(n);
-              say(`${n} players!`, "clapping");
-              setTimeout(() => go("color"), 700);
-            }}
-            className={`chunky flex flex-col items-center gap-2 p-5 text-ink ${
-              count === n ? "bg-play-yellow" : "bg-panel"
-            }`}
-          >
-            <span className="flex gap-1 text-4xl" aria-hidden>
-              {COUNT_FACES.slice(0, n).map((f, i) => (
-                <span key={i}>{f}</span>
-              ))}
-            </span>
-            <span className="font-display text-5xl">{n}</span>
-            <span className="sr-only">{n} players</span>
-          </button>
-        ))}
+        {([2, 3, 4] as const).map((n) => {
+          const tokens = auto ? tokensForCount(n) : manualTokens;
+          const minutes = estimateMinutes(n, tokens);
+          return (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={count === n}
+              onClick={() => {
+                sound.tap();
+                setCount(n);
+                say(`${n} players!`, "clapping");
+                setTimeout(() => go("color"), 700);
+              }}
+              className={`chunky flex flex-col items-center gap-2 p-5 text-ink ${
+                count === n ? "bg-play-yellow" : "bg-panel"
+              }`}
+            >
+              <span className="flex gap-1 text-4xl" aria-hidden>
+                {COUNT_FACES.slice(0, n).map((f, i) => (
+                  <span key={i}>{f}</span>
+                ))}
+              </span>
+              <span className="font-display text-5xl">{n}</span>
+              <span className="text-sm text-ink/70">
+                {n} players · {tokens} pieces each · about {minutes} minutes
+              </span>
+              {minutes >= 35 && (
+                <span className="text-sm font-bold text-play-red">
+                  That's a long game — around {minutes} minutes
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
       <ChunkyButton icon={<span aria-hidden>⬅</span>} onClick={() => go("mode")}>
         Back
