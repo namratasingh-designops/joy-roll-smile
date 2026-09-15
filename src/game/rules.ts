@@ -284,7 +284,8 @@ export function nextTurn(state: GameState): GameState {
     if (!playerDone(state.players[turn]!)) break;
   }
   const player = state.players[turn]!;
-  const lucky = state.rules.easyExit && player.stuckTurns >= 3;
+  // mercy rule: after two turns with nothing to do, any roll gets a token out
+  const lucky = state.rules.easyExit && player.stuckTurns >= 2;
   return { ...state, turn, dice: null, lucky };
 }
 
