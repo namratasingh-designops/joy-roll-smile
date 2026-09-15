@@ -41,7 +41,7 @@ export function tokensForCount(count: 2 | 3 | 4): 2 | 3 | 4 {
 
 /** Rough playing time in whole minutes, used on the "How many players?" screen. */
 export function estimateMinutes(count: 2 | 3 | 4, tokens: 2 | 3 | 4): number {
-  return Math.round(count * tokens * 1.5);
+  return Math.round(tokens * 3 * (count / 2));
 }
 
 export interface Token {
