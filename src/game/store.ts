@@ -187,11 +187,22 @@ function clearTimers() {
   timers = [];
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function load<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? ({ ...(fallback as object), ...JSON.parse(raw) } as T) : fallback;
+    if (!raw) return fallback;
+    const parsed: unknown = JSON.parse(raw);
+    // arrays (and other non-objects) come back as they were saved;
+    // only plain objects get merged onto the defaults
+    if (isPlainObject(parsed) && isPlainObject(fallback)) {
+      return { ...fallback, ...parsed } as T;
+    }
+    return parsed as T;
   } catch {
     return fallback;
   }
