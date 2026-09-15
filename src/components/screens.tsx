@@ -29,6 +29,13 @@ export function Splash() {
       <motion.div initial={{ scale: 0.6, y: -30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 200, damping: 12 }}>
         <Logo />
       </motion.div>
+      <h1 className="max-w-2xl text-center font-display text-2xl text-ink">
+        A fun ludo game for kids aged 5 to 7
+      </h1>
+      <p className="max-w-2xl text-center text-lg text-ink/70">
+        Free and easy to play on your own: big buttons, spoken instructions and counting practice with
+        Leo the lion. No reading needed, no ads.
+      </p>
       <div className="flex items-end gap-3">
         <Mascot mood={mood} size={140} />
         <SpeechBubble text={caption} />
