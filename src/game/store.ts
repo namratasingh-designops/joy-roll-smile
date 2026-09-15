@@ -213,7 +213,27 @@ export const useGame = create<Store>((set, get) => {
   }
 
   /* ------------------------------- turn flow ------------------------------ */
-  function beginTurn(): void {
+  /** Leo names whoever is up, then the hand pointer nudges after a pause. */
+  function humanTurnPrompt(): void {
+    const game = get().game;
+    if (!game) return;
+    const player = currentPlayer(game);
+    say(
+      player.name === "You" ? "Now it's your turn!" : `Now it's ${player.name}'s turn!`,
+      "pointing",
+    );
+    set({ hint: "Tap the dice to roll!" });
+    later(() => {
+      if (get().phase === "idle" && !get().overlay) set({ showHandPointer: true });
+    }, 4000);
+  }
+
+  /**
+   * `handoff: false` for the very first turn and for rolling again after a six —
+   * the device does not change hands in either case.
+   */
+  function beginTurn(opts: { handoff?: boolean } = {}): void {
+    const handoff = opts.handoff ?? true;
     const game = get().game;
     if (!game) return;
     if (isGameOver(game)) {
@@ -225,16 +245,13 @@ export const useGame = create<Store>((set, get) => {
     persistSave();
 
     if (player.isHuman) {
-      if (get().mode === "family" && get().game!.players.filter((p) => p.isHuman).length > 1) {
+      const humans = game.players.filter((p) => p.isHuman).length;
+      if (handoff && get().mode === "family" && humans > 1) {
         set({ overlay: "handoff" });
         say(line(LINES.passDevice(player.name)), "pointing");
         return;
       }
-      say(line(LINES.yourTurn), "pointing");
-      set({ hint: "Tap the dice to roll!" });
-      later(() => {
-        if (get().phase === "idle") set({ showHandPointer: true });
-      }, 4000);
+      humanTurnPrompt();
     } else {
       say(line(LINES.turnOf(player.name)), "thinking");
       set({ hint: `${player.name} is thinking…` });
