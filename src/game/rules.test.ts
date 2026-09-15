@@ -17,8 +17,9 @@ const defs = [
   { color: "red" as const, name: "Red", isHuman: false },
 ];
 
+/** Two tokens each keeps these assertions readable; the app now picks 2–4. */
 function game(over: Partial<typeof DEFAULT_RULES> = {}): GameState {
-  return createGame(defs, { ...DEFAULT_RULES, ...over });
+  return createGame(defs, { ...DEFAULT_RULES, tokensPerPlayer: 2, ...over });
 }
 
 describe("board geometry", () => {
