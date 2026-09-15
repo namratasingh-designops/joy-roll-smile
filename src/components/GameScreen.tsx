@@ -45,7 +45,7 @@ export function GameScreen() {
   const setOverlay = useGame((s) => s.setOverlay);
   const go = useGame((s) => s.go);
   const setSettings = useGame((s) => s.setSettings);
-  const skipBuddies = useGame((s) => s.skipBuddies);
+  
   const [webgl] = useState(() => webglAvailable());
 
   if (!game) return null;
