@@ -114,6 +114,10 @@ interface Store {
   overlay: Overlay;
   game: GameState | null;
   mode: "buddies" | "family";
+  /** how many players the family/child chose (2, 3 or 4) */
+  playerCount: 2 | 3 | 4;
+  /** the line-up of the current game, replayed by "Play again" */
+  lastDefs: PlayerDef[] | null;
   phase: Phase;
   dice: number | null;
   diceRollKey: number;
@@ -138,7 +142,11 @@ interface Store {
   setSettings: (patch: Partial<Settings>) => void;
   setRules: (patch: Partial<RuleSettings>) => void;
   say: (text: string, mood?: MascotMood) => void;
-  startGame: (mode: "buddies" | "family", color: Color, humans?: number) => void;
+  setMode: (mode: "buddies" | "family") => void;
+  setPlayerCount: (n: 2 | 3 | 4) => void;
+  startGame: (mode: "buddies" | "family", defs: PlayerDef[]) => void;
+  startBuddies: (color: Color, avatar: string) => void;
+  startFamily: (picks: { color: Color; avatar: string }[]) => void;
   resume: () => void;
   roll: () => void;
   watchBuddy: () => void;
