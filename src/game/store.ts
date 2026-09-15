@@ -109,6 +109,22 @@ export const BUDDY_AVATARS: Record<Color, string> = {
 
 export const STICKERS = ["⭐", "🦁", "🌈", "🎈", "🍀", "🌻", "🐢", "🚀", "🍎", "🎨", "🐬", "🧩"];
 
+/** Spoken names so pre-readers can tap a sticker and hear what it is. */
+export const STICKER_NAMES: Record<string, string> = {
+  "⭐": "A star!",
+  "🦁": "A lion!",
+  "🌈": "A rainbow!",
+  "🎈": "A balloon!",
+  "🍀": "A lucky clover!",
+  "🌻": "A sunflower!",
+  "🐢": "A turtle!",
+  "🚀": "A rocket!",
+  "🍎": "An apple!",
+  "🎨": "Paints!",
+  "🐬": "A dolphin!",
+  "🧩": "A puzzle piece!",
+};
+
 interface Store {
   screen: Screen;
   overlay: Overlay;
@@ -132,6 +148,8 @@ interface Store {
   settings: Settings;
   stickers: string[];
   newSticker: string | null;
+  /** true once this game has already handed out the "first token home" sticker */
+  earnedHomeSticker: boolean;
   showHandPointer: boolean;
   hasSave: boolean;
   tutorialStep: number;
@@ -171,11 +189,22 @@ function clearTimers() {
   timers = [];
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function load<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? ({ ...(fallback as object), ...JSON.parse(raw) } as T) : fallback;
+    if (!raw) return fallback;
+    const parsed: unknown = JSON.parse(raw);
+    // arrays (and other non-objects) come back as they were saved;
+    // only plain objects get merged onto the defaults
+    if (isPlainObject(parsed) && isPlainObject(fallback)) {
+      return { ...fallback, ...parsed } as T;
+    }
+    return parsed as T;
   } catch {
     return fallback;
   }
@@ -332,6 +361,11 @@ export const useGame = create<Store>((set, get) => {
             sound.fanfare();
             vibrate(40);
             say(line(LINES.homeToken), "cheering");
+            // first token safely home earns a sticker, even if the game is left early
+            if (player.isHuman && !get().earnedHomeSticker) {
+              set({ earnedHomeSticker: true });
+              awardSticker();
+            }
           } else if (ev.type === "gameOver") {
             extra = false;
           }
@@ -371,6 +405,18 @@ export const useGame = create<Store>((set, get) => {
     beginTurn();
   }
 
+  /** Hands out a sticker the child does not have yet, so every one feels new. */
+  function awardSticker(): string | null {
+    const owned = get().stickers;
+    const left = STICKERS.filter((s) => !owned.includes(s));
+    if (!left.length) return null;
+    const sticker = left[Math.floor(Math.random() * left.length)]!;
+    const stickers = [...owned, sticker];
+    save(STICKER_KEY, stickers);
+    set({ stickers, newSticker: sticker });
+    return sticker;
+  }
+
   function finish() {
     clearTimers();
     const game = get().game!;
@@ -378,16 +424,13 @@ export const useGame = create<Store>((set, get) => {
     const ranking = [...game.ranking];
     for (const p of game.players) if (!ranking.includes(p.color)) ranking.push(p.color);
     const finished: GameState = { ...game, ranking };
-    const sticker = STICKERS[Math.floor(Math.random() * STICKERS.length)] ?? "⭐";
-    const stickers = [...get().stickers, sticker];
-    save(STICKER_KEY, stickers);
+    const sticker = awardSticker() ?? get().stickers[get().stickers.length - 1] ?? "⭐";
     if (typeof window !== "undefined") window.localStorage.removeItem(SAVE_KEY);
     set({
       game: finished,
       phase: "gameOver",
       screen: "celebration",
       overlay: null,
-      stickers,
       newSticker: sticker,
       hasSave: false,
     });
@@ -425,6 +468,7 @@ export const useGame = create<Store>((set, get) => {
     settings: DEFAULT_SETTINGS,
     stickers: [],
     newSticker: null,
+    earnedHomeSticker: false,
     showHandPointer: false,
     hasSave: false,
     tutorialStep: 0,
@@ -507,6 +551,7 @@ export const useGame = create<Store>((set, get) => {
         visual: {},
         dice: null,
         newSticker: null,
+        earnedHomeSticker: false,
       });
       void unlockAudio();
       beginTurn({ handoff: false });
