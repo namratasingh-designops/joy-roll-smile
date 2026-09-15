@@ -22,6 +22,7 @@ import {
   playerDone,
   registerStuckTurn,
   rollDie,
+  tokensForCount,
   tokensHome,
 } from "./rules";
 import { LINES, line } from "./lines";
