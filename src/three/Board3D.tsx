@@ -110,6 +110,8 @@ function triangleShape() {
 function Pawn({
   color,
   movable,
+  selected,
+  wiggling,
   reduced,
   cell,
   hopping,
@@ -118,6 +120,8 @@ function Pawn({
 }: {
   color: Color;
   movable: boolean;
+  selected: boolean;
+  wiggling: boolean;
   reduced: boolean;
   cell: Cell;
   hopping: boolean;
@@ -134,16 +138,19 @@ function Pawn({
     const d = Math.min(delta, 0.05);
     t.current += d;
     const dist = g.position.distanceTo(target);
+    const lively = (movable || wiggling) && !reduced;
     if (dist > 0.001) {
       const k = reduced ? 24 : 12;
       g.position.lerp(target, 1 - Math.exp(-k * d));
       g.position.y = target.y + (reduced ? 0 : Math.min(dist, 1) * 0.5);
     } else {
       g.position.copy(target);
-      g.position.y = target.y + (movable && !reduced ? Math.abs(Math.sin(t.current * 3)) * 0.18 : 0);
+      const bounce = wiggling ? 0.26 : 0.18;
+      g.position.y = target.y + (lively ? Math.abs(Math.sin(t.current * (wiggling ? 8 : 3))) * bounce : 0);
     }
-    const s = movable && !reduced ? 1 + Math.sin(t.current * 6) * 0.04 : 1;
+    const s = lively ? 1 + Math.sin(t.current * 6) * (selected ? 0.08 : 0.04) : 1;
     g.scale.setScalar(s);
+    g.rotation.y = wiggling && !reduced ? Math.sin(t.current * 12) * 0.35 : 0;
   });
 
   return (
