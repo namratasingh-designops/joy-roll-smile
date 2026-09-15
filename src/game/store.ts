@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import {
-  COLOR_NAME,
-  COLORS,
   type Color,
   HOME_STEPS,
   cellOf,
+  seatColors,
   squareLabel,
 } from "./board";
 import {
