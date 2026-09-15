@@ -1,6 +1,6 @@
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, seatColors, type Color } from "@/game/board";
 import { estimateMinutes, tokensForCount } from "@/game/rules";
 import { AVATARS, STICKERS, STICKER_NAMES, useGame } from "@/game/store";
