@@ -138,6 +138,7 @@ export function GameScreen() {
             <span className="hidden lg:block">
               <TurnOrderStrip />
             </span>
+            <SkipBuddyButton />
           </div>
 
           <div className={`order-3 hidden lg:flex lg:justify-center lg:order-none ${settings.leftHanded ? "lg:col-start-1 lg:row-start-1" : ""}`}>
