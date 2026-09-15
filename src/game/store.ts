@@ -148,6 +148,8 @@ interface Store {
   settings: Settings;
   stickers: string[];
   newSticker: string | null;
+  /** true once this game has already handed out the "first token home" sticker */
+  earnedHomeSticker: boolean;
   showHandPointer: boolean;
   hasSave: boolean;
   tutorialStep: number;
