@@ -21,19 +21,27 @@ let noise: Tone.NoiseSynth | null = null;
 let marimba: Tone.PolySynth | null = null;
 let musicLoop: Tone.Loop | null = null;
 let musicGain: Tone.Gain | null = null;
+let limiter: Tone.Limiter | null = null;
 let settings: AudioSettings = {
   sound: true,
   music: true,
   voice: true,
   soundVolume: 0.8,
   musicVolume: 0.3,
-  voiceVolume: 1,
+  voiceVolume: 0.85,
   voiceRate: 0.9,
 };
 
+/** Music sits ~12dB under the effects (0.25 of their amplitude), not 25dB. */
+const MUSIC_FACTOR = 0.85;
+
+function musicLevel() {
+  return settings.music ? settings.musicVolume * MUSIC_FACTOR : 0;
+}
+
 export function setAudioSettings(next: AudioSettings) {
   settings = next;
-  if (musicGain) musicGain.gain.rampTo(next.music ? next.musicVolume * 0.25 : 0, 0.3);
+  if (musicGain) musicGain.gain.rampTo(musicLevel(), 0.3);
   if (!next.voice) stopVoice();
   if (started && next.music) startMusic();
 }
