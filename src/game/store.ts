@@ -51,6 +51,9 @@ export type MascotMood =
   | "waving"
   | "pointing";
 
+/** "starting" = gentle five-year-old play, "know" = a real game for 7-8s. */
+export type Difficulty = "starting" | "know";
+
 export interface Settings {
   sound: boolean;
   music: boolean;
@@ -65,6 +68,11 @@ export interface Settings {
   largerUI: boolean;
   leftHanded: boolean;
   breakReminder: boolean;
+  difficulty: Difficulty;
+  /** pieces follow the player count unless a grown-up picks a number by hand */
+  tokensAuto: boolean;
+  /** move straight away when there is only one option (off for older children) */
+  autoMoveSingle: boolean;
   rules: RuleSettings;
 }
 
@@ -74,7 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
   voice: true,
   soundVolume: 0.8,
   musicVolume: 0.3,
-  voiceVolume: 1,
+  voiceVolume: 0.85,
   voiceRate: 0.9,
   buddySpeed: 2000,
   reducedMotion: false,
@@ -82,6 +90,9 @@ export const DEFAULT_SETTINGS: Settings = {
   largerUI: false,
   leftHanded: false,
   breakReminder: true,
+  difficulty: "starting",
+  tokensAuto: true,
+  autoMoveSingle: true,
   rules: DEFAULT_RULES,
 };
 
