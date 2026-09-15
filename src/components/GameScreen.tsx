@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "@/game/store";
 import { Mascot, SpeechBubble } from "./Mascot";
-import { ChunkyButton, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, ValuesStrip } from "./bits";
+import { ChunkyButton, HopCounter, IconToggle, LiveRegion, Logo, PlayerCard, RollDiceButton, TokenButtons, ValuesStrip } from "./bits";
 import { Playroom } from "./Playroom";
 import { BoardFallback } from "./BoardFallback";
 import { BoardBoundary, retryImport } from "./BoardBoundary";
@@ -65,6 +65,7 @@ export function GameScreen() {
       ) : (
         <BoardFallback />
       )}
+      <HopCounter />
     </div>
   );
 

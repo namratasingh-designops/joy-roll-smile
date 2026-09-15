@@ -13,6 +13,13 @@ const COLOR_CLASS: Record<Color, string> = {
   yellow: "bg-play-yellow",
 };
 
+const RING_CLASS: Record<Color, string> = {
+  blue: "ring-play-blue",
+  red: "ring-play-red",
+  green: "ring-play-green",
+  yellow: "ring-play-yellow",
+};
+
 export function ChunkyButton({
   children,
   onClick,
@@ -127,7 +134,7 @@ export function PlayerCard({
     return (
       <div
         className={`flex items-center gap-2 rounded-2xl bg-panel px-3 py-2 shadow-soft ${
-          active ? "ring-4 ring-play-blue" : ""
+          active ? `ring-4 ${RING_CLASS[player.color]}` : ""
         }`}
       >
         <span
@@ -152,7 +159,7 @@ export function PlayerCard({
             transition: { type: "spring" as const, stiffness: 260, damping: 18 },
           })}
       className={`flex items-center gap-3 rounded-3xl px-4 py-3 shadow-soft ${
-        active ? "bg-sky/70 ring-4 ring-play-blue" : "bg-panel"
+        active ? `bg-sky/70 ring-4 ${RING_CLASS[player.color]}` : "bg-panel"
       }`}
     >
       <span
@@ -173,7 +180,24 @@ export function PlayerCard({
               aria-hidden
             />
           ))}
-          {active && <span className="ml-2 font-display text-sm text-ink">Your turn!</span>}
+          {active && player.isHuman && (
+            <span className="ml-2 font-display text-sm text-ink">Your turn!</span>
+          )}
+          {active && !player.isHuman && (
+            <span className="ml-2 flex items-center gap-1 font-display text-sm text-ink">
+              Thinking
+              <motion.span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-ink"
+                aria-hidden
+                {...(reduced
+                  ? {}
+                  : {
+                      animate: { opacity: [0.2, 1, 0.2] },
+                      transition: { duration: 1, repeat: Infinity },
+                    })}
+              />
+            </span>
+          )}
         </div>
       </div>
       <span className="sr-only">
@@ -188,6 +212,7 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
   const phase = useGame((s) => s.phase);
   const dice = useGame((s) => s.dice);
   const roll = useGame((s) => s.roll);
+  const watchBuddy = useGame((s) => s.watchBuddy);
   const game = useGame((s) => s.game);
   const showPointer = useGame((s) => s.showHandPointer);
   const reduced = useGame((s) => s.settings.reducedMotion);
@@ -198,8 +223,8 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
     <div className={`relative flex flex-col items-center ${layout === "wide" ? "w-full" : ""}`}>
       <motion.button
         type="button"
-        onClick={roll}
-        disabled={!canRoll}
+        onClick={() => (isHumanTurn ? roll() : watchBuddy())}
+        disabled={isHumanTurn && !canRoll}
         aria-label="Roll the dice"
         aria-keyshortcuts="Space Enter"
         {...(reduced || !canRoll
@@ -237,6 +262,31 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
           👆
         </motion.span>
       )}
+    </div>
+  );
+}
+
+/** The big counting number that pops over the board on every hop. */
+export function HopCounter() {
+  const hopCount = useGame((s) => s.hopCount);
+  const reduced = useGame((s) => s.settings.reducedMotion);
+  if (hopCount == null) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+      <motion.span
+        key={hopCount}
+        {...(reduced
+          ? {}
+          : {
+              initial: { scale: 0.4, opacity: 0 },
+              animate: { scale: [0.4, 1.25, 1], opacity: [0, 1, 0.9, 0] },
+              transition: { duration: 0.75, times: [0, 0.25, 0.6, 1] },
+            })}
+        className="font-display text-[6rem] font-black leading-none text-white drop-shadow-[0_6px_0_rgba(31,43,92,0.55)] sm:text-[8rem]"
+        aria-hidden
+      >
+        {hopCount}
+      </motion.span>
     </div>
   );
 }
