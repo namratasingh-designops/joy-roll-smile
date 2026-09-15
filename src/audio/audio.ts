@@ -51,22 +51,24 @@ export async function unlockAudio() {
   try {
     await Tone.start();
     Tone.getDestination().volume.value = -6;
+    // a gentle limiter so overlapping fanfares and hops can never clip
+    limiter = new Tone.Limiter(-3).toDestination();
     sfx = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: "triangle" },
       envelope: { attack: 0.005, decay: 0.18, sustain: 0.02, release: 0.2 },
-    }).toDestination();
+    }).connect(limiter);
     bell = new Tone.MetalSynth({
       envelope: { attack: 0.001, decay: 0.5, release: 0.2 },
       harmonicity: 6,
       resonance: 3000,
-    }).toDestination();
+    }).connect(limiter);
     bell.volume.value = -22;
     noise = new Tone.NoiseSynth({
       noise: { type: "brown" },
       envelope: { attack: 0.005, decay: 0.16, sustain: 0 },
-    }).toDestination();
+    }).connect(limiter);
     noise.volume.value = -16;
-    musicGain = new Tone.Gain(settings.music ? settings.musicVolume * 0.25 : 0).toDestination();
+    musicGain = new Tone.Gain(musicLevel()).connect(limiter);
     marimba = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: "sine" },
       envelope: { attack: 0.01, decay: 0.5, sustain: 0.05, release: 0.6 },
