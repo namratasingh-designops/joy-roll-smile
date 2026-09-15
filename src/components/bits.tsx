@@ -266,6 +266,31 @@ export function RollDiceButton({ layout = "side" }: { layout?: "side" | "wide" }
   );
 }
 
+/** The big counting number that pops over the board on every hop. */
+export function HopCounter() {
+  const hopCount = useGame((s) => s.hopCount);
+  const reduced = useGame((s) => s.settings.reducedMotion);
+  if (hopCount == null) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+      <motion.span
+        key={hopCount}
+        {...(reduced
+          ? {}
+          : {
+              initial: { scale: 0.4, opacity: 0 },
+              animate: { scale: [0.4, 1.25, 1], opacity: [0, 1, 0.9, 0] },
+              transition: { duration: 0.75, times: [0, 0.25, 0.6, 1] },
+            })}
+        className="font-display text-[6rem] font-black leading-none text-white drop-shadow-[0_6px_0_rgba(31,43,92,0.55)] sm:text-[8rem]"
+        aria-hidden
+      >
+        {hopCount}
+      </motion.span>
+    </div>
+  );
+}
+
 export function ValuesStrip() {
   const values = [
     { icon: "⭐", label: "Be kind" },
