@@ -208,6 +208,8 @@ function Scene() {
   const visual = useGame((s) => s.visual);
   const reduced = useGame((s) => s.settings.reducedMotion);
   const chooseToken = useGame((s) => s.chooseToken);
+  const selectedIndex = useGame((s) => s.selectedIndex);
+  const wiggleTokenId = useGame((s) => s.wiggleTokenId);
 
   const inPlay = useMemo(() => game?.players.map((p) => p.color) ?? COLORS, [game?.players]);
 
