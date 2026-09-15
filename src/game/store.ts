@@ -443,10 +443,19 @@ export const useGame = create<Store>((set, get) => {
       } catch {
         hasSave = false;
       }
+      let playerCount: 2 | 3 | 4 = 2;
+      try {
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem(COUNT_KEY) : null;
+        const n = raw ? Number(JSON.parse(raw)) : 2;
+        if (n === 3 || n === 4) playerCount = n;
+      } catch {
+        playerCount = 2;
+      }
       set({
         settings: merged,
         stickers: Array.isArray(stickers) ? stickers : [],
         hasSave,
+        playerCount,
       });
     },
 
