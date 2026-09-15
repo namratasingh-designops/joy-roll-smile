@@ -398,6 +398,18 @@ export const useGame = create<Store>((set, get) => {
     beginTurn();
   }
 
+  /** Hands out a sticker the child does not have yet, so every one feels new. */
+  function awardSticker(): string | null {
+    const owned = get().stickers;
+    const left = STICKERS.filter((s) => !owned.includes(s));
+    if (!left.length) return null;
+    const sticker = left[Math.floor(Math.random() * left.length)]!;
+    const stickers = [...owned, sticker];
+    save(STICKER_KEY, stickers);
+    set({ stickers, newSticker: sticker });
+    return sticker;
+  }
+
   function finish() {
     clearTimers();
     const game = get().game!;
@@ -405,16 +417,13 @@ export const useGame = create<Store>((set, get) => {
     const ranking = [...game.ranking];
     for (const p of game.players) if (!ranking.includes(p.color)) ranking.push(p.color);
     const finished: GameState = { ...game, ranking };
-    const sticker = STICKERS[Math.floor(Math.random() * STICKERS.length)] ?? "⭐";
-    const stickers = [...get().stickers, sticker];
-    save(STICKER_KEY, stickers);
+    const sticker = awardSticker() ?? get().stickers[get().stickers.length - 1] ?? "⭐";
     if (typeof window !== "undefined") window.localStorage.removeItem(SAVE_KEY);
     set({
       game: finished,
       phase: "gameOver",
       screen: "celebration",
       overlay: null,
-      stickers,
       newSticker: sticker,
       hasSave: false,
     });
