@@ -175,7 +175,11 @@ function duckMusic(down: boolean) {
   musicGain.gain.rampTo(down ? base * 0.35 : base, 0.2);
 }
 
-export function speak(text: string) {
+/**
+ * `queue: true` keeps whatever is already speaking (used for the counting
+ * words during a hop, which would otherwise cancel each other).
+ */
+export function speak(text: string, opts: { queue?: boolean } = {}) {
   if (!settings.voice || typeof window === "undefined" || !window.speechSynthesis) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
@@ -184,7 +188,7 @@ export function speak(text: string) {
     u.volume = settings.voiceVolume;
     u.onstart = () => duckMusic(true);
     u.onend = () => duckMusic(false);
-    window.speechSynthesis.cancel();
+    if (!opts.queue) window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch {
     /* ignore */

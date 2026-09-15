@@ -161,5 +161,80 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-body);
+  }
+
+  /* Always-visible focus ring for keyboard and switch users. */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 4px solid oklch(0.301 0.089 271);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px #fff;
+  }
+}
+
+/* Chunky toy button: solid bottom edge that squishes when pressed. */
+@utility chunky {
+  border-radius: 1.5rem;
+  box-shadow:
+    0 7px 0 0 rgb(0 0 0 / 0.22),
+    0 16px 30px -12px rgb(31 43 92 / 0.35);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease;
+
+  &:active {
+    transform: translateY(7px);
+    box-shadow:
+      0 1px 0 0 rgb(0 0 0 / 0.22),
+      0 8px 16px -12px rgb(31 43 92 / 0.35);
+  }
+}
+
+/* Minimum comfortable target for small fingers. */
+@utility touch-big {
+  min-width: 64px;
+  min-height: 64px;
+}
+
+/* High contrast: darker text, opaque surfaces, thicker borders. */
+.hc {
+  --color-ink: oklch(0.15 0.04 271);
+  --color-panel: oklch(1 0 0);
+
+  color: oklch(0.15 0.04 271);
+
+  *,
+  *::before,
+  *::after {
+    text-shadow: none !important;
+  }
+
+  [class*="bg-"] {
+    --tw-bg-opacity: 1;
+  }
+
+  button,
+  [role="button"],
+  .chunky,
+  input,
+  select,
+  textarea {
+    border: 3px solid oklch(0.15 0.04 271) !important;
+  }
+}
+
+/* Larger UI: bumps text and button padding ~25%. */
+.bigger-ui {
+  font-size: 125%;
+
+  button,
+  [role="button"] {
+    padding: 0.75em 1.1em;
   }
 }
