@@ -123,6 +123,7 @@ interface Store {
   startGame: (mode: "buddies" | "family", color: Color, humans?: number) => void;
   resume: () => void;
   roll: () => void;
+  watchBuddy: () => void;
   chooseToken: (tokenId: string) => void;
   skipBuddies: () => void;
   confirmHandoff: () => void;
@@ -250,7 +251,7 @@ export const useGame = create<Store>((set, get) => {
     const game = get().game!;
     const player = currentPlayer(game);
     const reduced = get().settings.reducedMotion;
-    const stepMs = reduced ? 60 : 230;
+    const stepMs = reduced ? 120 : 400;
     set({ phase: "moving", moves: [], showHandPointer: false });
 
     move.path.forEach((steps, i) => {
@@ -261,7 +262,7 @@ export const useGame = create<Store>((set, get) => {
         }));
         sound.hop(i);
         if (player.isHuman && get().settings.voice && move.path.length > 1) {
-          speak(LINES.countWords[Math.min(i, 5)] ?? "");
+          speak(LINES.countWords[Math.min(i, 5)] ?? "", { queue: true });
         }
       }, i * stepMs);
     });
@@ -471,6 +472,16 @@ export const useGame = create<Store>((set, get) => {
       } catch {
         /* ignore */
       }
+    },
+
+    /** Tapping the dice while a buddy plays: gentle nudge, no roll. */
+    watchBuddy() {
+      const game = get().game;
+      if (!game) return;
+      const player = currentPlayer(game);
+      if (player.isHuman) return;
+      sound.tap();
+      say(`It's ${player.name}'s turn — watch!`, "pointing");
     },
 
     roll() {
