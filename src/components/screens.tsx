@@ -83,8 +83,8 @@ export function Splash() {
 export function ModeSelect() {
   const go = useGame((s) => s.go);
   const say = useGame((s) => s.say);
-  const [mode, setMode] = useState<"buddies" | "family" | null>(null);
-  const setPending = useGame((s) => s.setOverlay);
+  const setMode = useGame((s) => s.setMode);
+  const mode = useGame((s) => s.mode);
   useEffect(() => {
     say("Who is playing today?", "pointing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,9 +92,7 @@ export function ModeSelect() {
   const pick = (m: "buddies" | "family") => {
     setMode(m);
     sound.tap();
-    (window as unknown as { __ludoMode?: string }).__ludoMode = m;
-    setPending(null);
-    go("color");
+    go("count");
   };
   return (
     <Shell>
@@ -110,7 +108,7 @@ export function ModeSelect() {
             🦁
           </span>
           <span className="font-display text-2xl">Play with buddies</span>
-          <span className="text-base text-ink/70">You and three computer friends</span>
+          <span className="text-base text-ink/70">You and computer friends</span>
         </button>
         <button
           type="button"
@@ -122,45 +120,188 @@ export function ModeSelect() {
             👨‍👩‍👧
           </span>
           <span className="font-display text-2xl">Play with family</span>
-          <span className="text-base text-ink/70">Share one device, take turns</span>
+          <span className="text-base text-ink/70">Everyone takes turns on this device</span>
         </button>
       </div>
     </Shell>
   );
 }
 
-export function ColorSelect() {
-  const startGame = useGame((s) => s.startGame);
+const COUNT_FACES = ["🦊", "🐼", "🐸", "🐰"];
+
+/** How many players? Two by default, shown as that many cartoon faces. */
+export function PlayerCountSelect() {
+  const go = useGame((s) => s.go);
   const say = useGame((s) => s.say);
+  const count = useGame((s) => s.playerCount);
+  const setCount = useGame((s) => s.setPlayerCount);
   useEffect(() => {
-    say("Pick your colour!", "pointing");
+    say("How many players?", "pointing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const mode = ((window as unknown as { __ludoMode?: "buddies" | "family" }).__ludoMode ??
-    "buddies") as "buddies" | "family";
   return (
     <Shell>
-      <h1 className="font-display text-4xl text-ink">Pick your colour</h1>
-      <div className="grid w-full grid-cols-2 gap-5 sm:grid-cols-4">
-        {COLORS.map((c) => (
+      <h1 className="font-display text-4xl text-ink">How many players?</h1>
+      <div className="grid w-full gap-5 sm:grid-cols-3">
+        {([2, 3, 4] as const).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-pressed={count === n}
+            onClick={() => {
+              sound.tap();
+              setCount(n);
+              say(`${n} players!`, "clapping");
+              setTimeout(() => go("color"), 700);
+            }}
+            className={`chunky flex flex-col items-center gap-2 p-5 text-ink ${
+              count === n ? "bg-play-yellow" : "bg-panel"
+            }`}
+          >
+            <span className="flex gap-1 text-4xl" aria-hidden>
+              {COUNT_FACES.slice(0, n).map((f, i) => (
+                <span key={i}>{f}</span>
+              ))}
+            </span>
+            <span className="font-display text-5xl">{n}</span>
+            <span className="sr-only">{n} players</span>
+          </button>
+        ))}
+      </div>
+      <ChunkyButton icon={<span aria-hidden>⬅</span>} onClick={() => go("mode")}>
+        Back
+      </ChunkyButton>
+    </Shell>
+  );
+}
+
+function ColorGrid({
+  allowed,
+  taken,
+  onPick,
+}: {
+  allowed: Color[];
+  taken: Color[];
+  onPick: (c: Color) => void;
+}) {
+  return (
+    <div className="grid w-full grid-cols-2 gap-5 sm:grid-cols-4">
+      {COLORS.map((c) => {
+        const free = allowed.includes(c) && !taken.includes(c);
+        return (
           <button
             key={c}
             type="button"
-            onClick={() => {
-              sound.tap();
-              say(`${COLOR_NAME[c]}! Good choice!`, "clapping");
-              startGame(mode, c, mode === "family" ? 2 : 1);
-            }}
-            className="chunky flex flex-col items-center gap-2 p-5 text-white"
+            disabled={!free}
+            onClick={() => free && onPick(c)}
+            className={`chunky relative flex flex-col items-center gap-2 p-5 text-white ${
+              free ? "" : "opacity-45 grayscale"
+            }`}
             style={{ background: COLOR_HEX[c] }}
           >
             <span className="text-5xl" aria-hidden>
               {COLOR_SYMBOL[c]}
             </span>
             <span className="font-display text-2xl drop-shadow">{COLOR_NAME[c]}</span>
+            {!free && (
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-7xl" aria-hidden>
+                ✖
+              </span>
+            )}
+            <span className="sr-only">{free ? "" : "already taken"}</span>
           </button>
-        ))}
-      </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AvatarGrid({ taken, onPick }: { taken: string[]; onPick: (a: string) => void }) {
+  return (
+    <div className="grid w-full grid-cols-4 gap-4">
+      {AVATARS.map((a) => {
+        const free = !taken.includes(a);
+        return (
+          <button
+            key={a}
+            type="button"
+            disabled={!free}
+            onClick={() => free && onPick(a)}
+            className={`chunky flex items-center justify-center bg-panel p-4 text-5xl ${
+              free ? "" : "opacity-40 grayscale"
+            }`}
+            aria-label={free ? "Pick this face" : "Face already taken"}
+          >
+            <span aria-hidden>{a}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ColorSelect() {
+  const say = useGame((s) => s.say);
+  const mode = useGame((s) => s.mode);
+  const count = useGame((s) => s.playerCount);
+  const startBuddies = useGame((s) => s.startBuddies);
+  const startFamily = useGame((s) => s.startFamily);
+  const [picks, setPicks] = useState<{ color: Color; avatar: string }[]>([]);
+  const [pendingColor, setPendingColor] = useState<Color | null>(null);
+
+  useEffect(() => {
+    say("Pick your colour!", "pointing");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const seat = picks.length; // which player is picking now
+  const first = picks[0]?.color;
+  const allowed = first ? seatColors(count, first) : COLORS;
+  const takenColors = picks.map((p) => p.color);
+  const takenAvatars = picks.map((p) => p.avatar);
+
+  const finish = (all: { color: Color; avatar: string }[]) => {
+    if (mode === "family") startFamily(all);
+    else startBuddies(all[0]!.color, all[0]!.avatar);
+  };
+
+  const chooseAvatar = (avatar: string) => {
+    sound.tap();
+    const all = [...picks, { color: pendingColor!, avatar }];
+    setPendingColor(null);
+    const need = mode === "family" ? count : 1;
+    if (all.length >= need) {
+      finish(all);
+      return;
+    }
+    setPicks(all);
+    say("Now the next player picks!", "pointing");
+  };
+
+  const title =
+    mode === "family" && seat > 0 ? `Player ${seat + 1}, pick your colour` : "Pick your colour";
+
+  if (pendingColor) {
+    return (
+      <Shell>
+        <h1 className="font-display text-4xl text-ink">Pick your face</h1>
+        <AvatarGrid taken={takenAvatars} onPick={chooseAvatar} />
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <h1 className="font-display text-4xl text-ink">{pendingColor ? "Pick your face" : title}</h1>
+      <ColorGrid
+        allowed={allowed}
+        taken={takenColors}
+        onPick={(c) => {
+          sound.tap();
+          say(`${COLOR_NAME[c]}! Good choice!`, "clapping");
+          setPendingColor(c);
+        }}
+      />
     </Shell>
   );
 }
