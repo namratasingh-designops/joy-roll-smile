@@ -190,6 +190,12 @@ function Pawn({
           <meshBasicMaterial color="#FFFFFF" transparent opacity={hopping ? 0.35 : 0.85} />
         </mesh>
       )}
+      {selected && (
+        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.66, 0.86, 28]} />
+          <meshBasicMaterial color="#FFC629" transparent opacity={0.95} />
+        </mesh>
+      )}
       <group name={label} />
     </group>
   );
