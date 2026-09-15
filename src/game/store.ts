@@ -109,6 +109,22 @@ export const BUDDY_AVATARS: Record<Color, string> = {
 
 export const STICKERS = ["⭐", "🦁", "🌈", "🎈", "🍀", "🌻", "🐢", "🚀", "🍎", "🎨", "🐬", "🧩"];
 
+/** Spoken names so pre-readers can tap a sticker and hear what it is. */
+export const STICKER_NAMES: Record<string, string> = {
+  "⭐": "A star!",
+  "🦁": "A lion!",
+  "🌈": "A rainbow!",
+  "🎈": "A balloon!",
+  "🍀": "A lucky clover!",
+  "🌻": "A sunflower!",
+  "🐢": "A turtle!",
+  "🚀": "A rocket!",
+  "🍎": "An apple!",
+  "🎨": "Paints!",
+  "🐬": "A dolphin!",
+  "🧩": "A puzzle piece!",
+};
+
 interface Store {
   screen: Screen;
   overlay: Overlay;
