@@ -759,10 +759,17 @@ export const useGame = create<Store>((set, get) => {
       performMove(move, dice);
     },
 
+    setSelectedIndex(n) {
+      set({ selectedIndex: n });
+    },
+
+    /** Speeds up only the buddy turn happening right now; saved settings stay. */
     skipBuddies() {
       const game = get().game;
       if (!game) return;
-      if (!currentPlayer(game).isHuman) set({ settings: { ...get().settings, buddySpeed: 700 } });
+      if (currentPlayer(game).isHuman) return;
+      sound.tap();
+      set({ turbo: true });
     },
 
     confirmHandoff() {
