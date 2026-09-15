@@ -52,10 +52,7 @@ export function GameScreen() {
   const active = game.players[game.turn]!;
 
   const board = (
-    <div
-      className="relative aspect-square w-full max-w-[min(92vw,72dvh)]"
-      onClick={() => skipBuddies()}
-    >
+    <div className="relative aspect-square w-full max-w-[min(92vw,72dvh)]">
       {webgl ? (
         <BoardBoundary fallback={<BoardFallback />}>
           <Suspense fallback={<Loader />}>
