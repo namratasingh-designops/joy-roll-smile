@@ -244,7 +244,8 @@ export function stopVoice() {
       /* ignore */
     }
   }
-  duckMusic(false);
+  speaking = 0;
+  applyDuck();
 }
 
 export function vibrate(pattern: number | number[]) {
