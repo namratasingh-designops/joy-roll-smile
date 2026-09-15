@@ -275,6 +275,8 @@ function Scene() {
               color={token.color}
               cell={shifted}
               movable={movable}
+              selected={movableIds[selectedIndex] === token.id}
+              wiggling={wiggleTokenId === token.id}
               reduced={reduced}
               hopping={visual[token.id] != null}
               label={token.id}
