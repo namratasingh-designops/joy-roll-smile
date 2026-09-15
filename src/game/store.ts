@@ -410,6 +410,8 @@ export const useGame = create<Store>((set, get) => {
     overlay: null,
     game: null,
     mode: "buddies",
+    playerCount: 2,
+    lastDefs: null,
     phase: "idle",
     dice: null,
     diceRollKey: 0,
@@ -538,7 +540,7 @@ export const useGame = create<Store>((set, get) => {
           dice: null,
         });
         void unlockAudio();
-        beginTurn();
+        beginTurn({ handoff: false });
       } catch {
         /* ignore */
       }
