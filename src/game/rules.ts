@@ -14,8 +14,8 @@ import {
 export type { Color };
 
 export interface RuleSettings {
-  /** tokens per player: 2 (kid) or 4 (classic) */
-  tokensPerPlayer: 2 | 4;
+  /** tokens per player: 2, 3 or 4 (usually derived from the player count) */
+  tokensPerPlayer: 2 | 3 | 4;
   /** easy: a 1 or a 6 leaves base. classic: only a 6 */
   easyExit: boolean;
   /** easy: reaching or passing home counts. classic: exact roll */
