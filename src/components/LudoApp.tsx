@@ -12,6 +12,7 @@ import {
   HowToPlay,
   ModeSelect,
   ParentGate,
+  PlayerCountSelect,
   SoundTest,
   Splash,
   StickerBook,
@@ -60,6 +61,7 @@ export default function LudoApp() {
       <KeyboardControls />
       {screen === "splash" && <Splash />}
       {screen === "mode" && <ModeSelect />}
+      {screen === "count" && <PlayerCountSelect />}
       {screen === "color" && <ColorSelect />}
       {screen === "game" && <GameScreen />}
       {screen === "howto" && <HowToPlay />}

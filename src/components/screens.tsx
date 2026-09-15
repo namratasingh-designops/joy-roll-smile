@@ -1,8 +1,8 @@
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, type Color } from "@/game/board";
-import { useGame } from "@/game/store";
+import { COLORS, COLOR_HEX, COLOR_NAME, COLOR_SYMBOL, seatColors, type Color } from "@/game/board";
+import { AVATARS, useGame } from "@/game/store";
 import { unlockAudio, sound, speak, vibrate } from "@/audio/audio";
 import { Mascot, SpeechBubble } from "./Mascot";
 import { ChunkyButton, Logo, ValuesStrip } from "./bits";
@@ -400,6 +400,7 @@ export function Celebration() {
             >
               <span className="text-4xl" aria-hidden>{MEDALS[Math.min(i, 3)]}</span>
               <span className="font-display text-2xl text-ink">
+                <span aria-hidden>{p?.avatar} </span>
                 {p?.name ?? COLOR_NAME[c]} {COLOR_SYMBOL[c]}
               </span>
               <span className="ml-auto font-display text-lg text-ink/70">
@@ -658,8 +659,19 @@ export function HandoffScreen() {
   return (
     <Modal title="Pass the device">
       <div className="flex flex-col items-center gap-5">
-        <span className="text-6xl" aria-hidden>🤝</span>
-        <p className="font-display text-3xl text-ink">Pass it to {player?.name}!</p>
+        <span className="text-4xl" aria-hidden>🤝</span>
+        {player && (
+          <div
+            className="flex h-40 w-40 items-center justify-center rounded-full text-[6rem] shadow-toy"
+            style={{ background: COLOR_HEX[player.color] }}
+            aria-hidden
+          >
+            {player.avatar}
+          </div>
+        )}
+        <p className="font-display text-3xl text-ink">
+          {player?.name}, it's your turn! {player ? COLOR_SYMBOL[player.color] : ""}
+        </p>
         <ChunkyButton tone="green" className="h-24 px-10 text-3xl" onClick={confirm}>
           Ready!
         </ChunkyButton>
