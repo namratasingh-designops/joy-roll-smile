@@ -149,9 +149,15 @@ interface Store {
   dice: number | null;
   diceRollKey: number;
   moves: Move[];
+  /** index of the move highlighted by keyboard play */
+  selectedIndex: number;
   /** steps value used for rendering while a token hops */
   visual: Record<string, number>;
   hopCount: number | null;
+  /** token given a hopeful wiggle when no move was possible */
+  wiggleTokenId: string | null;
+  /** this buddy turn only: play it out quickly */
+  turbo: boolean;
   caption: string;
   hint: string;
   mood: MascotMood;
@@ -170,6 +176,7 @@ interface Store {
   setOverlay: (o: Overlay) => void;
   setSettings: (patch: Partial<Settings>) => void;
   setRules: (patch: Partial<RuleSettings>) => void;
+  setDifficulty: (d: Difficulty) => void;
   say: (text: string, mood?: MascotMood) => void;
   setMode: (mode: "buddies" | "family") => void;
   setPlayerCount: (n: 2 | 3 | 4) => void;
@@ -180,6 +187,7 @@ interface Store {
   roll: () => void;
   watchBuddy: () => void;
   chooseToken: (tokenId: string) => void;
+  setSelectedIndex: (n: number) => void;
   skipBuddies: () => void;
   confirmHandoff: () => void;
   playAgain: () => void;
