@@ -65,6 +65,7 @@ export function Splash() {
           Keep playing
         </ChunkyButton>
       )}
+      <DifficultyPicker />
       <div className="flex flex-wrap justify-center gap-3">
         <ChunkyButton icon={<span aria-hidden>❓</span>} onClick={() => go("howto")}>
           How to play
@@ -78,6 +79,44 @@ export function Splash() {
       </div>
       <ValuesStrip />
     </Shell>
+  );
+}
+
+/** Right on the first screen: easy helpers, or full rules for older children. */
+function DifficultyPicker() {
+  const difficulty = useGame((s) => s.settings.difficulty);
+  const setDifficulty = useGame((s) => s.setDifficulty);
+  const say = useGame((s) => s.say);
+  const options = [
+    { key: "starting" as const, face: "🐣", label: "Just starting", hint: "Lots of help" },
+    { key: "know" as const, face: "🎓", label: "I know Ludo", hint: "Real rules, real choices" },
+  ];
+  return (
+    <div className="flex flex-wrap justify-center gap-3" role="group" aria-label="How well do you know Ludo?">
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          aria-pressed={difficulty === o.key}
+          onClick={() => {
+            sound.tap();
+            setDifficulty(o.key);
+            say(o.key === "know" ? "Great, real Ludo rules!" : "We'll help you along!", "clapping");
+          }}
+          className={`chunky flex items-center gap-3 px-5 py-3 text-ink ${
+            difficulty === o.key ? "bg-play-yellow" : "bg-panel"
+          }`}
+        >
+          <span className="text-3xl" aria-hidden>
+            {o.face}
+          </span>
+          <span className="text-left">
+            <span className="block font-display text-xl">{o.label}</span>
+            <span className="block text-sm text-ink/70">{o.hint}</span>
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 
