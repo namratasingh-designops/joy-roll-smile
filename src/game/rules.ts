@@ -25,11 +25,24 @@ export interface RuleSettings {
 }
 
 export const DEFAULT_RULES: RuleSettings = {
-  tokensPerPlayer: 2,
+  tokensPerPlayer: 4,
   easyExit: true,
   easyFinish: true,
   friendly: false,
 };
+
+/**
+ * Pieces each, tied to the player count so the game keeps roughly the same
+ * length and the same short wait between a child's turns.
+ */
+export function tokensForCount(count: 2 | 3 | 4): 2 | 3 | 4 {
+  return count === 2 ? 4 : count === 3 ? 3 : 2;
+}
+
+/** Rough playing time in whole minutes, used on the "How many players?" screen. */
+export function estimateMinutes(count: 2 | 3 | 4, tokens: 2 | 3 | 4): number {
+  return Math.round(count * tokens * 1.5);
+}
 
 export interface Token {
   id: string;
