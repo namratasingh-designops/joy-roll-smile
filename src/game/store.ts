@@ -508,8 +508,11 @@ export const useGame = create<Store>((set, get) => {
     });
     sound.win();
     vibrate([40, 60, 80]);
-    const human = finished.players.find((p) => p.isHuman);
-    say(human ? line(LINES.win) : line(LINES.buddyWin(finished.players[0]!.name)), "cheering");
+    // the headline must match the medals: only first place gets a win line
+    const winner = finished.players.find((p) => p.color === ranking[0]);
+    if (winner && winner.name === "You") say(line(LINES.win), "cheering");
+    else if (winner) say(line(LINES.buddyWin(winner.name)), "cheering");
+    else say(line(LINES.goodTry), "clapping");
   }
 
   function persistSave() {
