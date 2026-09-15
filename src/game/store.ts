@@ -551,6 +551,7 @@ export const useGame = create<Store>((set, get) => {
         visual: {},
         dice: null,
         newSticker: null,
+        earnedHomeSticker: false,
       });
       void unlockAudio();
       beginTurn({ handoff: false });
