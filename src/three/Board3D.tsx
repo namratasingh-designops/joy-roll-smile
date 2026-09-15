@@ -196,6 +196,8 @@ function Scene() {
   const reduced = useGame((s) => s.settings.reducedMotion);
   const chooseToken = useGame((s) => s.chooseToken);
 
+  const inPlay = useMemo(() => game?.players.map((p) => p.color) ?? COLORS, [game?.players]);
+
   const tiles = useMemo(() => {
     const list: { cell: Cell; color: string; star?: boolean }[] = [];
     LOOP.forEach((cell, i) => {
@@ -206,11 +208,12 @@ function Scene() {
         star: STAR_LOOP_INDEXES.includes(i),
       });
     });
-    COLORS.forEach((c) => {
+    // home lanes only exist for colours that are actually playing
+    inPlay.forEach((c) => {
       HOME_LANE[c].forEach((cell) => list.push({ cell, color: COLOR_HEX[c] }));
     });
     return list;
-  }, []);
+  }, [inPlay]);
 
   const movableIds = phase === "choosing" ? moves.map((m) => m.tokenId) : [];
 
@@ -236,7 +239,7 @@ function Scene() {
       </group>
 
       {COLORS.map((c) => (
-        <BasePad key={c} color={c} />
+        <BasePad key={c} color={c} inPlay={inPlay.includes(c)} />
       ))}
       {tiles.map((t, i) => (
         <Tile key={i} cell={t.cell} color={t.color} star={t.star} />
