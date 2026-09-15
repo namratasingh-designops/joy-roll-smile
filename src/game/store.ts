@@ -31,6 +31,7 @@ import { ensureAudioReady, setAudioSettings, sound, speak, stopVoice, unlockAudi
 export type Screen =
   | "splash"
   | "mode"
+  | "count"
   | "color"
   | "game"
   | "howto"
@@ -88,6 +89,24 @@ export const DEFAULT_SETTINGS: Settings = {
 const SETTINGS_KEY = "ludo.settings.v1";
 const STICKER_KEY = "ludo.stickers.v1";
 const SAVE_KEY = "ludo.save.v1";
+const COUNT_KEY = "ludo.players.v1";
+
+/** Cartoon faces children pick for themselves. */
+export const AVATARS = ["🦊", "🐼", "🐸", "🐰", "🐨", "🦄", "🐯", "🐵"];
+
+/** Computer friends get names and faces of their own. */
+export const BUDDY_NAMES: Record<Color, string> = {
+  blue: "Bo",
+  red: "Rosie",
+  green: "Gus",
+  yellow: "Yuna",
+};
+export const BUDDY_AVATARS: Record<Color, string> = {
+  blue: "🐬",
+  red: "🦊",
+  green: "🐸",
+  yellow: "🐥",
+};
 
 export const STICKERS = ["⭐", "🦁", "🌈", "🎈", "🍀", "🌻", "🐢", "🚀", "🍎", "🎨", "🐬", "🧩"];
 
