@@ -438,22 +438,82 @@ export function Celebration() {
 export function StickerBook() {
   const stickers = useGame((s) => s.stickers);
   const go = useGame((s) => s.go);
+  const reduced = useGame((s) => s.settings.reducedMotion);
+  const [wiggling, setWiggling] = useState<string | null>(null);
+  const owned = STICKERS.filter((s) => stickers.includes(s));
+  const empty = owned.length === 0;
+
+  async function tapSticker(sticker: string) {
+    await unlockAudio();
+    sound.star();
+    setWiggling(sticker);
+    setTimeout(() => setWiggling((w) => (w === sticker ? null : w)), 700);
+    speak(STICKER_NAMES[sticker] ?? "A sticker!");
+  }
+
   return (
     <Shell>
       <h1 className="font-display text-4xl text-ink">My sticker book</h1>
-      <p className="text-lg text-ink/70">One sticker for every game you finish.</p>
-      <div className="grid w-full grid-cols-4 gap-4 sm:grid-cols-6">
-        {Array.from({ length: Math.max(12, stickers.length) }).map((_, i) => (
-          <div
-            key={i}
-            className="flex aspect-square items-center justify-center rounded-3xl bg-panel text-4xl shadow-soft"
-          >
-            <span aria-hidden>{stickers[i] ?? ""}</span>
-            <span className="sr-only">{stickers[i] ? `Sticker ${i + 1}` : "Empty sticker space"}</span>
+      {empty ? (
+        <>
+          <div className="flex items-end gap-3">
+            <Mascot mood="happy" size={140} />
+            <SpeechBubble text="Finish a game to earn your first sticker!" />
           </div>
-        ))}
+          <div className="text-6xl" aria-hidden>
+            📄
+          </div>
+        </>
+      ) : (
+        <p className="text-lg text-ink/70">
+          <span className="font-display text-2xl text-ink">
+            {owned.length} of {STICKERS.length}
+          </span>{" "}
+          — tap a sticker to hear its name!
+        </p>
+      )}
+      <div className="grid w-full grid-cols-4 gap-4 sm:grid-cols-6">
+        {STICKERS.map((sticker) => {
+          const has = stickers.includes(sticker);
+          return has ? (
+            <motion.button
+              key={sticker}
+              type="button"
+              onClick={() => void tapSticker(sticker)}
+              animate={
+                reduced || wiggling !== sticker ? { rotate: 0 } : { rotate: [0, -14, 14, -10, 10, 0] }
+              }
+              transition={{ duration: 0.6 }}
+              className="touch-big chunky flex aspect-square items-center justify-center rounded-3xl bg-panel text-4xl shadow-soft"
+            >
+              <span aria-hidden>{sticker}</span>
+              <span className="sr-only">{STICKER_NAMES[sticker] ?? "Sticker"}</span>
+            </motion.button>
+          ) : (
+            <div
+              key={sticker}
+              className="flex aspect-square items-center justify-center rounded-3xl border-2 border-dashed border-ink/15 bg-panel/40 text-4xl opacity-25 grayscale"
+            >
+              <span aria-hidden>{sticker}</span>
+              <span className="sr-only">Sticker still to collect</span>
+            </div>
+          );
+        })}
       </div>
-      <ChunkyButton tone="green" icon={<span aria-hidden>🏠</span>} onClick={() => go("splash")}>
+      {empty && (
+        <ChunkyButton
+          tone="green"
+          icon={<span aria-hidden>▶</span>}
+          className="h-24 px-12 text-3xl"
+          onClick={async () => {
+            await unlockAudio();
+            go("mode");
+          }}
+        >
+          Let's play!
+        </ChunkyButton>
+      )}
+      <ChunkyButton tone="blue" icon={<span aria-hidden>🏠</span>} onClick={() => go("splash")}>
         Back home
       </ChunkyButton>
     </Shell>
