@@ -19,6 +19,10 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
       { name: "twitter:card", content: "summary_large_image" },
+      {
+        name: "google-site-verification",
+        content: "ldxTqmKfRneKUG9_0eE225X-7FQ73iC7-15wvjRGwZs",
+      },
     ],
     links: [{ rel: "canonical", href: URL }],
     scripts: [
