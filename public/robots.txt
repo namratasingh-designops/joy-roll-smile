@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://joy-roll-smile.lovable.app/sitemap.xml
